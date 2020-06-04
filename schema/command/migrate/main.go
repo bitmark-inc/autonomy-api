@@ -2,7 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/csv"
 	"fmt"
+	"io"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/jinzhu/gorm"
@@ -15,6 +19,8 @@ import (
 	"github.com/bitmark-inc/autonomy-api/schema"
 	"github.com/bitmark-inc/autonomy-api/store"
 )
+
+const testingCenterFilepath = "./data/TaiwanCDCTestCenter.csv"
 
 func init() {
 	viper.AutomaticEnv()
@@ -85,6 +91,10 @@ func migrateMongo() error {
 
 	if err := setupCDSConfirmCollection(client); err != nil {
 		fmt.Println("failed to set up collection `cds confirm`: ", err)
+		return err
+	}
+	if err := setupTestCenter(client); err != nil {
+		fmt.Println("failed to set up collection `testCenter collection`: ", err)
 		return err
 	}
 
@@ -177,6 +187,7 @@ func BehaviorListNullToEmptyArray(client *mongo.Client) error {
 	fmt.Println("Migration: replace Customized Behavior List with Empty Array result:", result.MatchedCount)
 	return nil
 }
+
 func setupCDSConfirmCollection(client *mongo.Client) error {
 	db := client.Database(viper.GetString("mongo.database"))
 	cdsIndex := mongo.IndexModel{
@@ -210,4 +221,68 @@ func setupCDSConfirmCollection(client *mongo.Client) error {
 	fmt.Println("confirm collection initialized", icelandCol)
 
 	return nil
+}
+
+func setupTestCenter(client *mongo.Client) error {
+	db := client.Database(viper.GetString("mongo.database"))
+	centers, err := loadTestCenter(testingCenterFilepath)
+	if err != nil {
+		return err
+	}
+	centersToInterface := make([]interface{}, 0, len(centers))
+	for _, c := range centers {
+		centersToInterface = append(centersToInterface, c)
+	}
+	db.Collection(schema.TestCenterCollection).Drop(context.Background())
+	_, err = db.Collection(schema.TestCenterCollection).InsertMany(context.Background(), centersToInterface)
+	if err != nil {
+		return err
+	}
+	fmt.Println("testCenter collection initialized", schema.TestCenterCollection)
+	return nil
+}
+
+func loadTestCenter(filepath string) ([]schema.TestCenter, error) {
+	testingCenter, err := os.Open(filepath)
+	if err != nil {
+		return []schema.TestCenter{}, err
+	}
+	centers := []schema.TestCenter{}
+	r := csv.NewReader(testingCenter)
+	for {
+		// Read each record from csv
+		record, err := r.Read()
+
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return centers, err
+		}
+		switch record[0] {
+		case schema.CdsTaiwan:
+			if len(record) < 8 {
+				continue
+			}
+			lat, err := strconv.ParseFloat(record[4], 64)
+			if err != nil {
+				continue
+			}
+			long, err := strconv.ParseFloat(record[5], 64)
+			if err != nil {
+				continue
+			}
+			center := schema.TestCenter{
+				Country:         schema.CDSCountryType(record[0]),
+				County:          record[1],
+				InstitutionCode: record[2],
+				Location:        schema.GeoJSON{Type: "Point", Coordinates: []float64{long, lat}},
+				Name:            record[3],
+				Address:         record[6],
+				Phone:           record[7],
+			}
+			centers = append(centers, center)
+		}
+	}
+	return centers, nil
 }
