@@ -198,6 +198,11 @@ func (s *Server) reportSymptoms(c *gin.Context) {
 		return
 	}
 
+	if _, err := s.mongoStore.SyncProfileIndividualMetrics(account.Profile.ID.String()); err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+
 	_, customied := schema.SplitSymptoms(symptoms)
 	if len(customied) > 0 {
 		err = s.mongoStore.UpdateAreaProfileSymptom(customied, *loc)

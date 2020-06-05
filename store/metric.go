@@ -18,6 +18,7 @@ const (
 
 type Metric interface {
 	CollectRawMetrics(location schema.Location) (*schema.Metric, error)
+	SyncProfileIndividualMetrics(profileID string) (*schema.IndividualMetric, error)
 	SyncAccountMetrics(accountNumber string, coefficient *schema.ScoreCoefficient, location schema.Location) (*schema.Metric, error)
 	SyncAccountPOIMetrics(accountNumber string, coefficient *schema.ScoreCoefficient, poiID primitive.ObjectID) (*schema.Metric, error)
 	SyncPOIMetrics(poiID primitive.ObjectID, location schema.Location) (*schema.Metric, error)
@@ -129,6 +130,38 @@ func (m *mongoDB) CollectRawMetrics(location schema.Location) (*schema.Metric, e
 			},
 		},
 	}, nil
+}
+
+// SyncProfileIndividualMetrics calculate individual metrics and save into profile
+func (m *mongoDB) SyncProfileIndividualMetrics(profileID string) (*schema.IndividualMetric, error) {
+	now := time.Now().UTC()
+
+	symptomsToday, symptomsYesterday, err := m.GetSymptomCount(profileID, nil, 0, now)
+	if err != nil {
+		return nil, err
+	}
+
+	symptomsDelta := score.ChangeRate(float64(symptomsToday), float64(symptomsYesterday))
+
+	behaviorsToday, behaviorsYesterday, err := m.GetBehaviorCount(profileID, nil, 0, now)
+	if err != nil {
+		return nil, err
+	}
+
+	behaviorsDelta := score.ChangeRate(float64(behaviorsToday), float64(behaviorsYesterday))
+
+	metric := schema.IndividualMetric{
+		SymptomCount:  float64(symptomsToday),
+		SymptomDelta:  symptomsDelta,
+		BehaviorCount: float64(behaviorsToday),
+		BehaviorDelta: behaviorsDelta,
+	}
+
+	if err := m.UpdateProfileIndividualMetric(profileID, metric); err != nil {
+		return nil, err
+	}
+
+	return &metric, nil
 }
 
 func (m *mongoDB) SyncAccountMetrics(accountNumber string, coefficient *schema.ScoreCoefficient, location schema.Location) (*schema.Metric, error) {

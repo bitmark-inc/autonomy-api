@@ -49,6 +49,7 @@ type Profile struct {
 	Location            *GeoJSON          `bson:"location,omitempty"`
 	Timezone            string            `bson:"timezone"`
 	HealthScore         float64           `bson:"health_score"`
+	IndividualMetric    IndividualMetric  `bson:"individual_metric"`
 	Metric              Metric            `bson:"metric"`
 	ScoreCoefficient    *ScoreCoefficient `bson:"score_coefficient"`
 	LastNudge           NudgeTime         `bson:"last_nudge,omitempty"`

@@ -53,6 +53,7 @@ func (s *Server) currentAreaProfile(c *gin.Context) {
 		return
 	}
 
+	individualMetric := profile.IndividualMetric
 	metric := profile.Metric
 
 	if profile.Location != nil {
@@ -71,7 +72,10 @@ func (s *Server) currentAreaProfile(c *gin.Context) {
 		} else if coefficient = profile.ScoreCoefficient; coefficient != nil && coefficient.UpdatedAt.Sub(metricLastUpdate) > 0 {
 			// will sync with coefficient = profile.ScoreCoefficient
 		} else {
-			c.JSON(http.StatusOK, metric)
+			c.JSON(http.StatusOK, gin.H{
+				"individual": individualMetric,
+				"neighbor":   metric,
+			})
 			return
 		}
 
@@ -85,5 +89,8 @@ func (s *Server) currentAreaProfile(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, metric)
+	c.JSON(http.StatusOK, gin.H{
+		"individual": individualMetric,
+		"neighbor":   metric,
+	})
 }

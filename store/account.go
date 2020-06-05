@@ -29,6 +29,7 @@ type MongoAccount interface {
 	GetProfilesByPOI(id string) ([]schema.Profile, error)
 	AppendPOIToAccountProfile(accountNumber string, desc schema.ProfilePOI) error
 
+	UpdateProfileIndividualMetric(profileID string, metric schema.IndividualMetric) error
 	UpdateProfileMetric(accountNumber string, metric schema.Metric) error
 	UpdateProfileTimezone(accountNumber string, timezone string) error
 	UpdateProfilePOIMetric(accountNumber string, poiID primitive.ObjectID, metric schema.Metric) error
@@ -430,6 +431,32 @@ func (m *mongoDB) ResetProfileCoefficient(accountNumber string) error {
 
 	_, err := c.UpdateOne(ctx, query, update)
 	return err
+}
+
+// UpdateProfileIndividualMetric update individual metric into profile
+func (m *mongoDB) UpdateProfileIndividualMetric(profileID string, metric schema.IndividualMetric) error {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+
+	c := m.client.Database(m.database).Collection(schema.ProfileCollection)
+	query := bson.M{
+		"id": profileID,
+	}
+	update := bson.M{
+		"$set": bson.M{
+			"individual_metric": metric,
+		},
+	}
+
+	result, err := c.UpdateOne(ctx, query, update)
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return errAccountNotFound
+	}
+
+	return nil
 }
 
 func (m *mongoDB) UpdateProfileMetric(accountNumber string, metric schema.Metric) error {

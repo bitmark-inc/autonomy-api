@@ -194,6 +194,11 @@ func (s *Server) reportBehaviors(c *gin.Context) {
 		return
 	}
 
+	if _, err := s.mongoStore.SyncProfileIndividualMetrics(account.Profile.ID.String()); err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+
 	_, nonOfficial := schema.SplitBehaviors(behaviors)
 	if len(nonOfficial) > 0 {
 		err = s.mongoStore.UpdateAreaProfileBehavior(nonOfficial, *loc)

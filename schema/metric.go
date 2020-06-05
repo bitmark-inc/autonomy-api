@@ -35,6 +35,13 @@ type Details struct {
 	Symptoms  SymptomDetail  `json:"symptoms" bson:"symptoms"`
 }
 
+type IndividualMetric struct {
+	SymptomCount  float64 `json:"symptoms" bson:"symptoms"`
+	SymptomDelta  float64 `json:"symptoms_delta" bson:"symptoms_delta"`
+	BehaviorCount float64 `json:"behavior" bson:"behavior"`
+	BehaviorDelta float64 `json:"behavior_delta" bson:"behavior_delta"`
+}
+
 type Metric struct {
 	ConfirmedCount float64 `json:"confirm" bson:"confirm"`
 	ConfirmedDelta float64 `json:"confirm_delta" bson:"confirm_delta"`
