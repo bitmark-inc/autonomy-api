@@ -252,7 +252,8 @@ func (s *Server) reportSymptoms(c *gin.Context) {
 	}
 	if len(official) > 0 {
 		c.JSON(http.StatusOK, gin.H{"result": "OK", "guide": centers})
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{"result": "OK", "guide": []schema.TestCenter{}})
+	c.JSON(http.StatusOK, gin.H{"result": "OK", "guide": []schema.NearbyTestCenter{}})
 	return
 }

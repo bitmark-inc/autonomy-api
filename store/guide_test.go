@@ -63,7 +63,6 @@ func (s *GuideTestSuite) SetupSuite() {
 
 	schema.NewMongoDBIndexer(s.connURI, s.testDBName).IndexGuideCollection()
 	s.ExpectedRecordCount = 162
-	s.ExpectedCountReturn = 5
 	s.testCenterFile = "./fixtures/TaiwanCDCTestCenter.csv"
 	centers, err := loadTestCenter(s.testCenterFile)
 	if err != nil {
@@ -72,9 +71,11 @@ func (s *GuideTestSuite) SetupSuite() {
 	s.Centers = centers
 	s.CreateTestCenterDB()
 	s.LocationSet = append(s.LocationSet, schema.Location{
-		Latitude:  float64(25.06485243),
-		Longitude: float64(121.611873),
+		AddressComponent: schema.AddressComponent{Country: schema.CdsTaiwan},
+		Latitude:         float64(25.06485243),
+		Longitude:        float64(121.611873),
 	})
+	s.ExpectedCountReturn = 5
 	s.ExpectNearestInsitutionCode = []string{"1101110026", "101090517", "1131110516", "501010019", "1501010010"}
 }
 
@@ -84,7 +85,7 @@ func (s *GuideTestSuite) TestNearbyTestCenter() {
 	s.NoError(err)
 	s.Equal(s.ExpectedCountReturn, int64(len(centers)))
 	for idx, center := range centers {
-		s.Equal(s.ExpectNearestInsitutionCode[idx], center.InstitutionCode)
+		s.Equal(s.ExpectNearestInsitutionCode[idx], center.Center.InstitutionCode)
 	}
 }
 
