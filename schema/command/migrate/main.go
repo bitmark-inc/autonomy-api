@@ -224,7 +224,19 @@ func setupCDSConfirmCollection(client *mongo.Client) error {
 }
 
 func setupTestCenter(client *mongo.Client) error {
-	db := client.Database(viper.GetString("mongo.database"))
+	c := client.Database(viper.GetString("mongo.database")).Collection(schema.TestCenterCollection)
+	c.Drop(context.Background())
+	idx := mongo.IndexModel{
+		Keys: bson.M{
+			"location": "2dsphere",
+		},
+	}
+	_, err := c.Indexes().CreateOne(context.Background(), idx)
+
+	if err != nil {
+		return err
+	}
+
 	centers, err := loadTestCenter(testingCenterFilepath)
 	if err != nil {
 		return err
@@ -233,8 +245,8 @@ func setupTestCenter(client *mongo.Client) error {
 	for _, c := range centers {
 		centersToInterface = append(centersToInterface, c)
 	}
-	db.Collection(schema.TestCenterCollection).Drop(context.Background())
-	_, err = db.Collection(schema.TestCenterCollection).InsertMany(context.Background(), centersToInterface)
+
+	_, err = c.InsertMany(context.Background(), centersToInterface)
 	if err != nil {
 		return err
 	}

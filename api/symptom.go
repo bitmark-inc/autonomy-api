@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"time"
-
+	
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 
@@ -203,7 +203,7 @@ func (s *Server) reportSymptoms(c *gin.Context) {
 		return
 	}
 
-	_, customied := schema.SplitSymptoms(symptoms)
+	official, customied := schema.SplitSymptoms(symptoms)
 	if len(customied) > 0 {
 		err = s.mongoStore.UpdateAreaProfileSymptom(customied, *loc)
 		if err != nil { // do nothing
@@ -245,8 +245,14 @@ func (s *Server) reportSymptoms(c *gin.Context) {
 	} else {
 		c.Error(err)
 	}
-
-	c.JSON(http.StatusOK, gin.H{"result": "OK"})
-
+	centers, err := s.mongoStore.NearbyTestCenter(*loc, 10)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	if len(official) > 0 {
+		c.JSON(http.StatusOK, gin.H{"result": "OK", "guide": centers})
+	}
+	c.JSON(http.StatusOK, gin.H{"result": "OK", "guide": []schema.TestCenter{}})
 	return
 }

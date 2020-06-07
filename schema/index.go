@@ -55,6 +55,7 @@ func (m *MongoDBIndexer) IndexAll() {
 	panicIfError(m.IndexSymptomCollection())
 	panicIfError(m.IndexSymptomReportCollection())
 	panicIfError(m.IndexCDSConfirmCollection())
+	panicIfError(m.IndexGuideCollection())
 }
 
 func (m *MongoDBIndexer) IndexProfileCollection() error {
@@ -187,4 +188,11 @@ func (m *MongoDBIndexer) IndexCDSConfirmCollection() error {
 		return err
 	}
 	return nil
+}
+func (m *MongoDBIndexer) IndexGuideCollection() error {
+	return m.createIndex(TestCenterCollection, mongo.IndexModel{
+		Keys: bson.M{
+			"location": "2dsphere",
+		},
+	})
 }
