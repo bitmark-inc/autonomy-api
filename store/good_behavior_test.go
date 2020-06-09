@@ -229,7 +229,7 @@ func (s *BehaviorTestSuite) TestGetNearbyReportingBehaviorsUserCount() {
 	store := NewMongoStore(s.mongoClient, s.testDBName)
 
 	now := time.Date(2020, 5, 26, 12, 0, 0, 0, time.UTC)
-	count, err := store.GetNearbyReportingUserCount(
+	count, countYesterday, err := store.GetNearbyReportingUserCount(
 		schema.ReportTypeBehavior,
 		s.neighborhoodRadius,
 		schema.Location{
@@ -239,9 +239,10 @@ func (s *BehaviorTestSuite) TestGetNearbyReportingBehaviorsUserCount() {
 		now)
 	s.NoError(err)
 	s.Equal(2, count)
+	s.Equal(1, countYesterday)
 
 	now = time.Date(2020, 5, 26, 12, 0, 0, 0, time.UTC)
-	count, err = store.GetNearbyReportingUserCount(
+	count, countYesterday, err = store.GetNearbyReportingUserCount(
 		schema.ReportTypeBehavior,
 		s.neighborhoodRadius,
 		schema.Location{
@@ -250,6 +251,7 @@ func (s *BehaviorTestSuite) TestGetNearbyReportingBehaviorsUserCount() {
 		}, now)
 	s.NoError(err)
 	s.Equal(1, count)
+	s.Equal(0, countYesterday)
 }
 
 func TestBehaviorTestSuite(t *testing.T) {

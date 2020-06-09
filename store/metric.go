@@ -46,6 +46,10 @@ func (m *mongoDB) CollectRawMetrics(location schema.Location) (*schema.Metric, e
 	if err != nil {
 		return nil, err
 	}
+	behaviorReportTimesYesterday, err := m.FindNearbyBehaviorReportTimes(consts.NEARBY_DISTANCE_RANGE, location, yesterdayStartAtUnix, todayStartAtUnix)
+	if err != nil {
+		return nil, err
+	}
 
 	symptomDistToday, err := m.FindNearbySymptomDistribution(consts.NEARBY_DISTANCE_RANGE, location, todayStartAtUnix, tomorrowStartAtUnix)
 	if err != nil {
@@ -55,7 +59,7 @@ func (m *mongoDB) CollectRawMetrics(location schema.Location) (*schema.Metric, e
 	if err != nil {
 		return nil, err
 	}
-	symptomUserCount, err := m.GetNearbyReportingUserCount(schema.ReportTypeSymptom, consts.NEARBY_DISTANCE_RANGE, location, now)
+	symptomUserCountToday, symptomUserCountYesterday, err := m.GetNearbyReportingUserCount(schema.ReportTypeSymptom, consts.NEARBY_DISTANCE_RANGE, location, now)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +119,8 @@ func (m *mongoDB) CollectRawMetrics(location schema.Location) (*schema.Metric, e
 				ContinuousData: confirmData,
 			},
 			Symptoms: schema.SymptomDetail{
-				TotalPeople: float64(symptomUserCount),
+				TotalPeople:          float64(symptomUserCountToday),
+				TotalPeopleYesterday: float64(symptomUserCountYesterday),
 				TodayData: schema.NearestSymptomData{
 					WeightDistribution: symptomDistToday,
 				},
@@ -125,6 +130,7 @@ func (m *mongoDB) CollectRawMetrics(location schema.Location) (*schema.Metric, e
 			},
 			Behaviors: schema.BehaviorDetail{
 				ReportTimes:           behaviorReportTimes,
+				ReportTimesYesterday:  behaviorReportTimesYesterday,
 				TodayDistribution:     behaviorDistrToday,
 				YesterdayDistribution: behaviorDistrYesterday,
 			},
@@ -150,11 +156,21 @@ func (m *mongoDB) SyncProfileIndividualMetrics(profileID string) (*schema.Indivi
 
 	behaviorsDelta := score.ChangeRate(float64(behaviorsToday), float64(behaviorsYesterday))
 
+	var scoreToday, scoreYesterday float64
+	if symptomsToday == 0 {
+		scoreToday = 100
+	}
+	if symptomsYesterday == 0 {
+		scoreYesterday = 100
+	}
+
 	metric := schema.IndividualMetric{
-		SymptomCount:  float64(symptomsToday),
-		SymptomDelta:  symptomsDelta,
-		BehaviorCount: float64(behaviorsToday),
-		BehaviorDelta: behaviorsDelta,
+		Score:          scoreToday,
+		ScoreYesterday: scoreYesterday,
+		SymptomCount:   float64(symptomsToday),
+		SymptomDelta:   symptomsDelta,
+		BehaviorCount:  float64(behaviorsToday),
+		BehaviorDelta:  behaviorsDelta,
 	}
 
 	if err := m.UpdateProfileIndividualMetric(profileID, metric); err != nil {

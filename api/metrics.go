@@ -39,7 +39,7 @@ func (s *Server) getSymptomMetrics(c *gin.Context) {
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer)
 		return
 	}
-	reporterCount, err := s.mongoStore.GetNearbyReportingUserCount(schema.ReportTypeSymptom, consts.NEARBY_DISTANCE_RANGE, *loc, now)
+	reporterCount, _, err := s.mongoStore.GetNearbyReportingUserCount(schema.ReportTypeSymptom, consts.NEARBY_DISTANCE_RANGE, *loc, now)
 	if err != nil {
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer)
 		return
@@ -85,7 +85,7 @@ func (s *Server) getBehaviorMetrics(c *gin.Context) {
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer)
 		return
 	}
-	reporterCount, err := s.mongoStore.GetNearbyReportingUserCount(schema.ReportTypeBehavior, consts.NEARBY_DISTANCE_RANGE, *loc, now)
+	reporterCount, _, err := s.mongoStore.GetNearbyReportingUserCount(schema.ReportTypeBehavior, consts.NEARBY_DISTANCE_RANGE, *loc, now)
 	if err != nil {
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer)
 		return

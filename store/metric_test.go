@@ -122,6 +122,10 @@ func (s *MetricTestSuite) LoadMongoDBFixtures() error {
 			ID:            "test-account-profile-id",
 			AccountNumber: "account-test",
 		},
+		schema.Profile{
+			ID:            "test-account-no-data",
+			AccountNumber: "account-test-no-data",
+		},
 	}); err != nil {
 		return err
 	}
@@ -164,6 +168,34 @@ func (s *MetricTestSuite) TestSyncProfileIndividualMetrics() {
 	}, options.FindOne().SetProjection(bson.M{"individual_metric": 1})).Decode(&profile)
 	s.NoError(err)
 
+	s.Equal(float64(0), m.Score)
+	s.Equal(float64(0), m.ScoreYesterday)
+	s.Equal(profile.IndividualMetric.Score, m.Score)
+	s.Equal(profile.IndividualMetric.ScoreYesterday, m.ScoreYesterday)
+	s.Equal(profile.IndividualMetric.SymptomCount, m.SymptomCount)
+	s.Equal(profile.IndividualMetric.SymptomDelta, m.SymptomDelta)
+	s.Equal(profile.IndividualMetric.BehaviorCount, m.BehaviorCount)
+	s.Equal(profile.IndividualMetric.BehaviorDelta, m.BehaviorDelta)
+}
+
+// TestSyncProfileIndividualMetricsWithoutData tests if the score will be
+// set to 100 if there is not symptom data
+func (s *MetricTestSuite) TestSyncProfileIndividualMetricsWithoutData() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+
+	m, err := store.SyncProfileIndividualMetrics("test-account-no-data")
+	s.NoError(err)
+
+	var profile schema.Profile
+	err = s.testDatabase.Collection(schema.ProfileCollection).FindOne(context.Background(), bson.M{
+		"id": "test-account-no-data",
+	}, options.FindOne().SetProjection(bson.M{"individual_metric": 1})).Decode(&profile)
+	s.NoError(err)
+
+	s.Equal(float64(100), m.Score)
+	s.Equal(float64(100), m.ScoreYesterday)
+	s.Equal(profile.IndividualMetric.Score, m.Score)
+	s.Equal(profile.IndividualMetric.ScoreYesterday, m.ScoreYesterday)
 	s.Equal(profile.IndividualMetric.SymptomCount, m.SymptomCount)
 	s.Equal(profile.IndividualMetric.SymptomDelta, m.SymptomDelta)
 	s.Equal(profile.IndividualMetric.BehaviorCount, m.BehaviorCount)

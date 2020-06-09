@@ -195,6 +195,12 @@ func (s *Server) setupRouter() *gin.Engine {
 		poiRoute.DELETE("/:poiID", s.deletePOI)
 	}
 
+	autonomyProfile := apiRoute.Group("/autonomy_profile")
+	autonomyProfile.Use(s.recognizeAccountMiddleware())
+	{
+		autonomyProfile.GET("/:poiID", s.autonomyProfile)
+	}
+
 	areaProfile := apiRoute.Group("/area_profile")
 	areaProfile.Use(s.recognizeAccountMiddleware())
 	{

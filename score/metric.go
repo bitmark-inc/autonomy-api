@@ -74,8 +74,16 @@ func CalculateMetric(rawMetrics schema.Metric, coefficient *schema.ScoreCoeffici
 
 	if coefficient != nil {
 		metric.Score = TotalScoreV1(*coefficient, metric.Details.Symptoms.Score, metric.Details.Behaviors.Score, metric.Details.Confirm.Score)
+		metric.ScoreYesterday = TotalScoreV1(*coefficient,
+			metric.Details.Symptoms.ScoreYesterday,
+			metric.Details.Behaviors.ScoreYesterday,
+			metric.Details.Confirm.ScoreYesterday)
 	} else {
 		metric.Score = DefaultTotalScore(metric.Details.Symptoms.Score, metric.Details.Behaviors.Score, metric.Details.Confirm.Score)
+		metric.ScoreYesterday = DefaultTotalScore(
+			metric.Details.Symptoms.ScoreYesterday,
+			metric.Details.Behaviors.ScoreYesterday,
+			metric.Details.Confirm.ScoreYesterday)
 	}
 
 	return metric

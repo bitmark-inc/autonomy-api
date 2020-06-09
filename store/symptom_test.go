@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -122,21 +121,21 @@ func (s *SymptomTestSuite) TestGetSymptomCountForIndividual() {
 
 	now := time.Date(2020, 5, 25, 12, 0, 0, 0, time.UTC)
 	todayCount, yesterdayCount, err := store.GetSymptomCount("userA", nil, 0, now)
-	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), 2, todayCount)
-	assert.Equal(s.T(), 0, yesterdayCount)
+	s.NoError(err)
+	s.Equal(2, todayCount)
+	s.Equal(0, yesterdayCount)
 
 	now = time.Date(2020, 5, 26, 12, 0, 0, 0, time.UTC)
 	todayCount, yesterdayCount, err = store.GetSymptomCount("userA", nil, 0, now)
-	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), 2, todayCount)
-	assert.Equal(s.T(), 2, yesterdayCount)
+	s.NoError(err)
+	s.Equal(2, todayCount)
+	s.Equal(2, yesterdayCount)
 
 	now = time.Date(2020, 5, 27, 12, 0, 0, 0, time.UTC)
 	todayCount, yesterdayCount, err = store.GetSymptomCount("userA", nil, 0, now)
-	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), 0, todayCount)
-	assert.Equal(s.T(), 2, yesterdayCount)
+	s.NoError(err)
+	s.Equal(0, todayCount)
+	s.Equal(2, yesterdayCount)
 }
 
 func (s *SymptomTestSuite) TestGetSymptomCountForCommunity() {
@@ -150,21 +149,21 @@ func (s *SymptomTestSuite) TestGetSymptomCountForCommunity() {
 
 	now := time.Date(2020, 5, 25, 12, 0, 0, 0, time.UTC)
 	todayCount, yesterdayCount, err := store.GetSymptomCount("", loc, dist, now)
-	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), 2, todayCount)
-	assert.Equal(s.T(), 0, yesterdayCount)
+	s.NoError(err)
+	s.Equal(2, todayCount)
+	s.Equal(0, yesterdayCount)
 
 	now = time.Date(2020, 5, 26, 12, 0, 0, 0, time.UTC)
 	todayCount, yesterdayCount, err = store.GetSymptomCount("", loc, dist, now)
-	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), 4, todayCount)
-	assert.Equal(s.T(), 2, yesterdayCount)
+	s.NoError(err)
+	s.Equal(4, todayCount)
+	s.Equal(2, yesterdayCount)
 
 	now = time.Date(2020, 5, 27, 12, 0, 0, 0, time.UTC)
 	todayCount, yesterdayCount, err = store.GetSymptomCount("", loc, dist, now)
-	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), 0, todayCount)
-	assert.Equal(s.T(), 4, yesterdayCount)
+	s.NoError(err)
+	s.Equal(0, todayCount)
+	s.Equal(4, yesterdayCount)
 }
 
 func (s *SymptomTestSuite) TestGetNearbyReportingSymptomsUserCount() {
@@ -173,7 +172,7 @@ func (s *SymptomTestSuite) TestGetNearbyReportingSymptomsUserCount() {
 	dist := consts.CORHORT_DISTANCE_RANGE
 
 	now := time.Date(2020, 5, 26, 12, 0, 0, 0, time.UTC)
-	count, err := store.GetNearbyReportingUserCount(
+	count, countYesterday, err := store.GetNearbyReportingUserCount(
 		schema.ReportTypeSymptom,
 		dist,
 		schema.Location{
@@ -181,19 +180,21 @@ func (s *SymptomTestSuite) TestGetNearbyReportingSymptomsUserCount() {
 			Latitude:  locationBitmark.Coordinates[1],
 		},
 		now)
-	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), 2, count)
+	s.NoError(err)
+	s.Equal(2, count)
+	s.Equal(1, countYesterday)
 
 	now = time.Date(2020, 5, 26, 12, 0, 0, 0, time.UTC)
-	count, err = store.GetNearbyReportingUserCount(
+	count, countYesterday, err = store.GetNearbyReportingUserCount(
 		schema.ReportTypeSymptom,
 		dist,
 		schema.Location{
 			Longitude: locationTaipeiTrainStation.Coordinates[0],
 			Latitude:  locationTaipeiTrainStation.Coordinates[1],
 		}, now)
-	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), 1, count)
+	s.NoError(err)
+	s.Equal(1, count)
+	s.Equal(0, countYesterday)
 }
 
 func TestSymptomTestSuite(t *testing.T) {

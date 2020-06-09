@@ -9,11 +9,22 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/bitmark-inc/autonomy-api/schema"
+	"github.com/bitmark-inc/autonomy-api/score"
 )
 
 const (
 	metricUpdateInterval = 5 * time.Minute
 )
+
+// autonomyProfile is a routing to dispatch requests between current user profile or a POI profile
+func (s *Server) autonomyProfile(c *gin.Context) {
+	id := c.Param("poiID")
+
+	if id == "me" {
+		s.currentAreaProfile(c)
+		return
+	}
+}
 
 func (s *Server) singleAreaProfile(c *gin.Context) {
 	accountNumber := c.GetString("requester")
@@ -62,8 +73,6 @@ func (s *Server) currentAreaProfile(c *gin.Context) {
 			Longitude: profile.Location.Coordinates[0],
 		}
 
-		// FIXME: return cached result directly if possible; otherwise get coefficient and run SyncAccountMetrics
-
 		metricLastUpdate := time.Unix(metric.LastUpdate, 0)
 		var coefficient *schema.ScoreCoefficient
 
@@ -72,9 +81,12 @@ func (s *Server) currentAreaProfile(c *gin.Context) {
 		} else if coefficient = profile.ScoreCoefficient; coefficient != nil && coefficient.UpdatedAt.Sub(metricLastUpdate) > 0 {
 			// will sync with coefficient = profile.ScoreCoefficient
 		} else {
+			autonomyScore, autonomyScoreDelta := score.CalculateIndividualAutonomyScore(individualMetric, metric)
 			c.JSON(http.StatusOK, gin.H{
-				"individual": individualMetric,
-				"neighbor":   metric,
+				"autonomy_score":       autonomyScore,
+				"autonomy_score_delta": autonomyScoreDelta,
+				"individual":           individualMetric,
+				"neighbor":             metric,
 			})
 			return
 		}
@@ -89,8 +101,11 @@ func (s *Server) currentAreaProfile(c *gin.Context) {
 		}
 	}
 
+	autonomyScore, autonomyScoreDelta := score.CalculateIndividualAutonomyScore(individualMetric, metric)
 	c.JSON(http.StatusOK, gin.H{
-		"individual": individualMetric,
-		"neighbor":   metric,
+		"autonomy_score":       autonomyScore,
+		"autonomy_score_delta": autonomyScoreDelta,
+		"individual":           individualMetric,
+		"neighbor":             metric,
 	})
 }
