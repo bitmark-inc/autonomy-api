@@ -252,10 +252,10 @@ func (s *Server) reportSymptoms(c *gin.Context) {
 	centers, err := s.mongoStore.NearbyTestCenter(*loc, 10)
 	if err != nil {
 		c.Error(err)
-		c.JSON(http.StatusOK, gin.H{"result": "OK",, "official": official, "guide": []schema.NearbyTestCenter{}})
+		c.JSON(http.StatusOK, gin.H{"result": "OK", "official": len(official), "guide": []schema.NearbyTestCenter{}})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"result": "OK", , "official": official,"guide": centers})
+	c.JSON(http.StatusOK, gin.H{"result": "OK", "official": len(official), "guide": centers})
 	return
 
 }
