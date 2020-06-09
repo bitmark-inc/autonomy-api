@@ -59,8 +59,11 @@ func (m mongoDB) NearbyTestCenter(loc schema.Location, limit int64) ([]schema.Ne
 			continue
 		}
 		center.Distance = km
-		center.Latitude = center.Location.Coordinates[1]
-		center.Longitude = center.Location.Coordinates[0]
+		if len(center.Location.Coordinates) >= 2 {
+			center.Longitude = center.Location.Coordinates[0]
+			center.Latitude = center.Location.Coordinates[1]
+		}
+
 		results = append(results, center)
 
 		log.Info(center)
