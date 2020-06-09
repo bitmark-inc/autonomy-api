@@ -71,7 +71,7 @@ func (m *mongoDB) CollectRawMetrics(location schema.Location) (*schema.Metric, e
 	}
 
 	// Processing confirmed case data
-	activeCount, activeDiff, activeDiffPercent, err := m.GetCDSActive(location)
+	activeCount, activeDiff, activeDiffPercent, err := m.GetCDSActive(location, now.Unix())
 	if err == ErrNoConfirmDataset || err == ErrInvalidConfirmDataset || err == ErrPoliticalTypeGeoInfo {
 		log.WithFields(log.Fields{
 			"prefix":   mongoLogPrefix,

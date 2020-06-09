@@ -272,6 +272,10 @@ behaviors:
     name: 勤於清潔、消毒物品表面
     desc: 對於會以手碰觸的物品例如燈具開關、桌面、鍵盤、門把，於固定時間以酒精消毒一次
 
+conditions:
+  covid_19:
+    name: 新冠肺炎
+
 notification:
   symptom_follow_up:
     heading: 症狀持續發生嗎?

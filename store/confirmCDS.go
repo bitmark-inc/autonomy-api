@@ -26,7 +26,7 @@ var (
 type ConfirmCDS interface {
 	ReplaceCDS(result []schema.CDSData, country string) error
 	CreateCDS(result []schema.CDSData, country string) error
-	GetCDSActive(loc schema.Location) (float64, float64, float64, error)
+	GetCDSActive(loc schema.Location, referenceTime int64) (float64, float64, float64, error)
 	DeleteCDSUnused(country string, timeBefore int64) error
 	ContinuousDataCDSConfirm(loc schema.Location, num int64, timeBefore int64) ([]schema.CDSScoreDataSet, error)
 }
@@ -100,6 +100,7 @@ func (m *mongoDB) CreateCDS(result []schema.CDSData, country string) error {
 	}
 	return nil
 }
+
 func (m *mongoDB) DeleteCDSUnused(country string, timeBefore int64) error {
 	collection, ok := schema.CDSCountyCollectionMatrix[schema.CDSCountryType(country)]
 	if !ok {
@@ -114,47 +115,30 @@ func (m *mongoDB) DeleteCDSUnused(country string, timeBefore int64) error {
 	log.WithFields(log.Fields{"prefix": mongoLogPrefix, "records": res.DeletedCount}).Debug("DeleteCDSUnused delete data")
 	return nil
 }
-func (m mongoDB) GetCDSActive(loc schema.Location) (float64, float64, float64, error) {
+
+// GetCDSActive returns latest metrics available for the given `referenceTime`,
+// so only history data before `referenceTime` is taken into consideration.
+// The returned values are active count, the delta of active count compared to previous day and the change rate.
+func (m mongoDB) GetCDSActive(loc schema.Location, referenceTime int64) (float64, float64, float64, error) {
 	log.WithFields(log.Fields{"prefix": mongoLogPrefix, "country": loc.Country, "state": loc.State, "county": loc.County}).Debug("GetCDSConfirm geo info")
+
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
-	var results []schema.CDSData
-	var c *mongo.Collection
-	var cur *mongo.Cursor
-	switch loc.Country { //  Currently this function support only USA data
-	case schema.CdsTaiwan:
-		c = m.client.Database(m.database).Collection(schema.CDSCountyCollectionMatrix[schema.CDSCountryType(schema.CdsTaiwan)])
-		opts := options.Find().SetSort(bson.M{"report_ts": -1}).SetLimit(2)
-		filter := bson.M{}
-		curTW, err := c.Find(context.Background(), filter, opts)
-		if nil != err {
-			log.WithField("prefix", mongoLogPrefix).Errorf("CDS confirm data find  error: %s", err)
-			return 0, 0, 0, ErrConfirmDataFetch
-		}
-		cur = curTW
-	case schema.CdsIceland:
-		c = m.client.Database(m.database).Collection(schema.CDSCountyCollectionMatrix[schema.CDSCountryType(schema.CdsIceland)])
-		opts := options.Find().SetSort(bson.M{"report_ts": -1}).SetLimit(2)
-		filter := bson.M{}
-		curIceland, err := c.Find(context.Background(), filter, opts)
-		if nil != err {
-			log.WithField("prefix", mongoLogPrefix).Errorf("CDS confirm data find  error: %s", err)
-			return 0, 0, 0, ErrConfirmDataFetch
-		}
-		cur = curIceland
-	case schema.CdsUSA:
-		c = m.client.Database(m.database).Collection(schema.CDSCountyCollectionMatrix[schema.CDSCountryType(schema.CdsUSA)])
-		opts := options.Find().SetSort(bson.M{"report_ts": -1}).SetLimit(2)
-		filter := bson.M{"county": loc.County, "state": loc.State}
-		curUSA, err := c.Find(context.Background(), filter, opts)
-		if nil != err {
-			return 0, 0, 0, ErrConfirmDataFetch
-		}
-		cur = curUSA
-	default:
+
+	collectionName, ok := schema.CDSCountyCollectionMatrix[schema.CDSCountryType(loc.Country)]
+	if !ok {
 		return 0, 0, 0, ErrNoConfirmDataset
 	}
 
+	filter := bson.M{"report_ts": bson.M{"$lte": referenceTime}}
+	opts := options.Find().SetSort(bson.M{"report_ts": -1}).SetLimit(2)
+	cur, err := m.client.Database(m.database).Collection(collectionName).Find(context.Background(), filter, opts)
+	if nil != err {
+		log.WithField("prefix", mongoLogPrefix).WithError(err).Errorf("failed to get CDS data")
+		return 0, 0, 0, ErrConfirmDataFetch
+	}
+
+	var results []schema.CDSData
 	for cur.Next(ctx) {
 		var result schema.CDSData
 		if errDecode := cur.Decode(&result); errDecode != nil {
@@ -184,7 +168,7 @@ func (m mongoDB) GetCDSActive(loc schema.Location) (float64, float64, float64, e
 		today = results[0]
 		return today.Active, today.Active, score.ChangeRate(today.Active, 0), nil
 	}
-	return 0, 0, 0, ErrInvalidConfirmDataset
+	return 0, 0, 0, nil
 }
 
 func (m mongoDB) ContinuousDataCDSConfirm(loc schema.Location, windowSize int64, timeBefore int64) ([]schema.CDSScoreDataSet, error) {
