@@ -27,16 +27,15 @@ func (m mongoDB) NearbyTestCenter(loc schema.Location, limit int64) ([]schema.Ne
 		//matchAggregate(loc.Country),
 		limitAggregate(limit),
 		bson.D{{"$project", bson.M{
-			"_id":      -1,
-			"distance": 1,
-			"center": bson.M{
-				"country":          "$country",
-				"institution_code": "$institution_code",
-				"location":         "$location",
-				"name":             "$name",
-				"address":          "$address",
-				"phone":            "$phone",
-			},
+			"_id":              -1,
+			"distance":         1,
+			"country":          1,
+			"county":           1,
+			"location":         1,
+			"institution_code": 1,
+			"name":             1,
+			"address":          1,
+			"phone":            1,
 		}}},
 	}
 
@@ -53,13 +52,17 @@ func (m mongoDB) NearbyTestCenter(loc schema.Location, limit int64) ([]schema.Ne
 			log.WithError(err).Warnf("nearbyTest center decode fail")
 			continue
 		}
+
 		km, err := strconv.ParseFloat(fmt.Sprintf("%0.2f", center.Distance/1000), 64)
 		if err != nil {
 			log.WithError(err).Warnf("TestCenter Parse float error")
 			continue
 		}
 		center.Distance = km
+		center.Latitude = center.Location.Coordinates[1]
+		center.Longitude = center.Location.Coordinates[0]
 		results = append(results, center)
+
 		log.Info(center)
 	}
 	return results, nil
