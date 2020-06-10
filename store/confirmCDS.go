@@ -230,7 +230,6 @@ func (m mongoDB) ContinuousDataCDSConfirm(loc schema.Location, windowSize int64,
 	if len(results) == 0 && now.Name != "" { // only one record
 		results = append(results, now)
 	}
-
 	cur.Close(ctx)
 	return results, nil
 }

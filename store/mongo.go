@@ -28,6 +28,7 @@ type MongoStore interface {
 	Metric
 	ConfirmCDS
 	Report
+	Guide
 }
 
 // Closer - close db connection
