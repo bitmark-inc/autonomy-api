@@ -29,7 +29,7 @@ type Symptom interface {
 	ListCustomizedSymptoms() ([]schema.Symptom, error)
 	SymptomReportSave(data *schema.SymptomReportData) error
 	FindSymptomsByIDs(ids []string) ([]schema.Symptom, error)
-	FindNearbySymptomDistribution(dist int, loc schema.Location, start, end int64) (map[string]int, error)
+	FindSymptomDistribution(profileID string, loc *schema.Location, dist int, start, end int64, unique bool) (map[string]int, error)
 	FindNearbyNonOfficialSymptoms(dist int, loc schema.Location) ([]schema.Symptom, error)
 	GetSymptomCount(profileID string, loc *schema.Location, dist int, now time.Time) (int, int, error)
 }
@@ -214,10 +214,11 @@ func (m *mongoDB) FindSymptomsByIDs(ids []string) ([]schema.Symptom, error) {
 	return symptoms, nil
 }
 
-// FindNearbySymptomDistribution returns the mapping of each reported symptom and the number of users who have reported it
-// in the specified area and within the specified time rage.
+// FindSymptomDistribution returns the mapping of each reported symptom and its aggregated value
+// within the specified time rage (1) from a specified user or (2) in the specified area.
 //
-// Duplicated reported symptoms of a user are seen as one symptom.
+// If `unique` is true, each aggregated value means how many people have reported this symptom.
+// Otherwise, it means how many times a symptom is reported.
 //
 // Here's the example: within the specified time interval, assume there are following 5 reports:
 //
@@ -229,14 +230,29 @@ func (m *mongoDB) FindSymptomsByIDs(ids []string) ([]schema.Symptom, error) {
 // | userB | [fever]               |
 // | userB | [fever] 			    |
 //
-// symptom_distribution = {fever: 2, cough: 1, nasal: 1}
-func (m *mongoDB) FindNearbySymptomDistribution(dist int, loc schema.Location, start, end int64) (map[string]int, error) {
+// unique = T, symptom_distribution = {fever: 2, cough: 1, nasal: 1}
+// unique = F, symptom_distribution = {fever: 5, cough: 2, nasal: 1}
+func (m *mongoDB) FindSymptomDistribution(profileID string, loc *schema.Location, dist int, start, end int64, unique bool) (map[string]int, error) {
 	c := m.client.Database(m.database).Collection(schema.SymptomReportCollection)
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 
+	var filter bson.M
+	switch {
+	case profileID != "":
+		filter = bson.M{
+			"$match": bson.M{
+				"profile_id": profileID,
+			},
+		}
+	case loc != nil:
+		filter = aggStageGeoProximity(dist, *loc)
+	default:
+		return nil, errors.New("either profile ID or location not provided")
+	}
+
 	pipeline := []bson.M{
-		aggStageGeoProximity(dist, loc),
+		filter,
 		aggStageReportedBetween(start, end),
 		{
 			"$project": bson.M{
@@ -257,28 +273,44 @@ func (m *mongoDB) FindNearbySymptomDistribution(dist int, loc schema.Location, s
 				"preserveNullAndEmptyArrays": false,
 			},
 		},
-		{
-			"$group": bson.M{
-				"_id": "$profile_id",
-				"symptoms": bson.M{
-					"$addToSet": "$symptoms",
+	}
+	if unique {
+		stages := []bson.M{
+			{
+				"$group": bson.M{
+					"_id": "$profile_id",
+					"symptoms": bson.M{
+						"$addToSet": "$symptoms",
+					},
+				},
+			}, // for each user, the number of types of symptoms reported
+			{
+				"$unwind": bson.M{
+					"path":                       "$symptoms",
+					"preserveNullAndEmptyArrays": false,
 				},
 			},
-		}, // for each user, the number of types of symptoms reported
-		{
-			"$unwind": bson.M{
-				"path":                       "$symptoms",
-				"preserveNullAndEmptyArrays": false,
-			},
-		},
-		{
-			"$group": bson.M{
-				"_id": "$symptoms._id",
-				"count": bson.M{
-					"$sum": 1,
+			{
+				"$group": bson.M{
+					"_id": "$symptoms._id",
+					"count": bson.M{
+						"$sum": 1,
+					},
+				},
+			}, // for each symptom, the number of users who have reported it
+		}
+		pipeline = append(pipeline, stages...)
+	} else {
+		pipeline = append(pipeline,
+			bson.M{
+				"$group": bson.M{
+					"_id": "$symptoms._id",
+					"count": bson.M{
+						"$sum": 1,
+					},
 				},
 			},
-		}, // for each symptom, the number of users who have reported it
+		)
 	}
 
 	cursor, err := c.Aggregate(ctx, pipeline)
@@ -302,7 +334,7 @@ func (m *mongoDB) FindNearbySymptomDistribution(dist int, loc schema.Location, s
 
 // FindNearbyNonOfficialSymptoms returns non-official symptoms reported today in the specified area.
 func (m *mongoDB) FindNearbyNonOfficialSymptoms(dist int, loc schema.Location) ([]schema.Symptom, error) {
-	distribution, err := m.FindNearbySymptomDistribution(dist, loc, 0, 9223372036854775807)
+	distribution, err := m.FindSymptomDistribution("", &loc, dist, 0, 9223372036854775807, true)
 	if err != nil {
 		return nil, err
 	}

@@ -17,8 +17,8 @@ var (
 	symptomReport1 = schema.SymptomReportData{
 		ProfileID: "userA",
 		Symptoms: []schema.Symptom{
-			{ID: " cough"},
-			{ID: " fever"},
+			{ID: "cough"},
+			{ID: "fever"},
 		},
 		Location:  locationNangangTrainStation,
 		Timestamp: tsMay25Morning,
@@ -26,8 +26,8 @@ var (
 	symptomReport2 = schema.SymptomReportData{
 		ProfileID: "userA",
 		Symptoms: []schema.Symptom{
-			{ID: " cough"},
-			{ID: " fever"},
+			{ID: "cough"},
+			{ID: "fever"},
 		},
 		Location:  locationNangangTrainStation,
 		Timestamp: tsMay26Morning,
@@ -35,8 +35,8 @@ var (
 	symptomReport3 = schema.SymptomReportData{
 		ProfileID: "userA",
 		Symptoms: []schema.Symptom{
-			{ID: " cough"},
-			{ID: " fever"},
+			{ID: "cough"},
+			{ID: "fever"},
 		},
 		Location:  locationSinica,
 		Timestamp: tsMay26Evening,
@@ -62,16 +62,18 @@ var (
 
 type SymptomTestSuite struct {
 	suite.Suite
-	connURI      string
-	testDBName   string
-	mongoClient  *mongo.Client
-	testDatabase *mongo.Database
+	connURI            string
+	testDBName         string
+	mongoClient        *mongo.Client
+	testDatabase       *mongo.Database
+	neighborhoodRadius int
 }
 
 func NewSymptomTestSuite(connURI, dbName string) *SymptomTestSuite {
 	return &SymptomTestSuite{
-		connURI:    connURI,
-		testDBName: dbName,
+		connURI:            connURI,
+		testDBName:         dbName,
+		neighborhoodRadius: 5000, // 5 km
 	}
 }
 
@@ -114,6 +116,45 @@ func (s *SymptomTestSuite) SetupSuite() {
 
 func (s *SymptomTestSuite) CleanMongoDB() error {
 	return s.testDatabase.Drop(context.Background())
+}
+
+func (s *SymptomTestSuite) TestFindSymptomDistribution() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+
+	start := time.Date(2020, 5, 26, 0, 0, 0, 0, time.UTC).UTC().Unix()
+	end := time.Date(2020, 5, 26, 24, 0, 0, 0, time.UTC).UTC().Unix()
+	distribution, err := store.FindSymptomDistribution("",
+		&schema.Location{
+			Longitude: locationBitmark.Coordinates[0],
+			Latitude:  locationBitmark.Coordinates[1],
+		}, s.neighborhoodRadius, start, end, true)
+	s.NoError(err)
+	s.Equal(map[string]int{
+		"cough":            1,
+		"fever":            1,
+		"loss_taste_smell": 1,
+		"new_symptom_1":    1,
+	}, distribution)
+
+	distribution, err = store.FindSymptomDistribution("",
+		&schema.Location{
+			Longitude: locationBitmark.Coordinates[0],
+			Latitude:  locationBitmark.Coordinates[1],
+		}, s.neighborhoodRadius, start, end, false)
+	s.NoError(err)
+	s.Equal(map[string]int{
+		"cough":            2,
+		"fever":            2,
+		"loss_taste_smell": 1,
+		"new_symptom_1":    1,
+	}, distribution)
+
+	distribution, err = store.FindSymptomDistribution("userA", nil, s.neighborhoodRadius, start, end, false)
+	s.NoError(err)
+	s.Equal(map[string]int{
+		"cough": 2,
+		"fever": 2,
+	}, distribution)
 }
 
 func (s *SymptomTestSuite) TestGetSymptomCountForIndividual() {

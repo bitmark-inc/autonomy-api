@@ -141,17 +141,16 @@ func (s *BehaviorTestSuite) CleanMongoDB() error {
 	return s.testDatabase.Drop(context.Background())
 }
 
-func (s *BehaviorTestSuite) TestFindNearbyBehaviorDistribution() {
+func (s *BehaviorTestSuite) TestFindBehaviorDistribution() {
 	store := NewMongoStore(s.mongoClient, s.testDBName)
 
 	start := time.Date(2020, 5, 26, 0, 0, 0, 0, time.UTC).UTC().Unix()
 	end := time.Date(2020, 5, 26, 24, 0, 0, 0, time.UTC).UTC().Unix()
-	distribution, err := store.FindNearbyBehaviorDistribution(
-		s.neighborhoodRadius,
-		schema.Location{
+	distribution, err := store.FindBehaviorDistribution("",
+		&schema.Location{
 			Longitude: locationBitmark.Coordinates[0],
 			Latitude:  locationBitmark.Coordinates[1],
-		}, start, end)
+		}, s.neighborhoodRadius, start, end)
 	s.NoError(err)
 	s.Equal(map[string]int{
 		"clean_hand":        2,
@@ -159,6 +158,8 @@ func (s *BehaviorTestSuite) TestFindNearbyBehaviorDistribution() {
 		"touch_face":        1,
 		"new_behavior":      1,
 	}, distribution)
+
+	// TODO: test personal
 }
 
 func (s *BehaviorTestSuite) TestFindNearbyBehaviorReportTimes() {
