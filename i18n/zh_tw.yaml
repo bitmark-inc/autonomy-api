@@ -276,6 +276,268 @@ conditions:
   covid_19:
     name: 新冠肺炎
 
+resources:
+  resource_1:
+    name: 戴口罩
+  resource_2:
+    name: 戴手套
+  resource_3:
+    name: 檢查體溫
+  resource_4:
+    name: 手部消毒
+  resource_5:
+    name: 表面消毒(桌面)
+  resource_6:
+    name: 洗手設施
+  resource_7:
+    name: 清潔衛生間
+  resource_8:
+    name: 社交距離維持
+  resource_9:
+    name: 保持空氣流通
+  resource_10:
+    name: 全天然(未加工)飲食
+  resource_11:
+    name: 地中海飲食
+  resource_12:
+    name: 原始人飲食法
+  resource_13:
+    name: 純素食/植物性飲食
+  resource_14:
+    name: 蛋奶素飲食
+  resource_15:
+    name: 無麩質飲食
+
+  resource_16:
+    name: 得舒飲食
+  resource_17:
+    name: 區間飲食法
+  resource_18:
+    name: 彈性素食
+  resource_19:
+    name: 體重觀察者飲食
+  resource_20:
+    name: 瑜伽與血壓
+  resource_21:
+    name: 心智飲食
+  resource_22:
+    name: 容量飲食
+  resource_23:
+    name: 歐尼許飲食法
+  resource_24:
+    name: 治療型生活型態飲食
+  resource_25:
+    name: 抗炎症飲食*
+  resource_26:
+    name: 北歐飲食
+  resource_27:
+    name: 無反式脂肪飲食
+  resource_28:
+    name: 低升糖飲食
+  resource_29:
+    name: 低脂肪飲食
+  resource_30:
+    name: 低鹽飲食
+
+  resource_31:
+    name: 無乳製/無乳糖
+  resource_32:
+    name: 生機飲食
+  resource_33:
+    name: 低醣飲食
+  resource_34:
+    name: 無碳水化合物無糖飲食
+  resource_35:
+    name: 生酮飲食
+  resource_36:
+    name: 維他命D
+  resource_37:
+    name: 鈣
+  resource_38:
+    name: 魚油
+  resource_39:
+    name: 魚油（n−3脂肪酸）
+  resource_40:
+    name: 亞麻籽（n−3脂肪酸）
+  resource_41:
+    name: 纖維
+  resource_42:
+    name: 硒
+  resource_43:
+    name: 益菌元
+  resource_44:
+    name: 益生菌
+  resource_45:
+    name: 間歇性斷食
+
+  resource_46:
+    name: 斷食
+  resource_47:
+    name: 美式足球
+  resource_48:
+    name: 射箭
+  resource_49:
+    name: 澳式足球
+  resource_50:
+    name: 羽球
+  resource_51:
+    name: Barre
+  resource_52:
+    name: 棒球
+  resource_53:
+    name: 籃球
+  resource_54:
+    name: 保齡球
+  resource_55:
+    name: 拳擊
+  resource_56:
+    name: 爬山
+  resource_57:
+    name: 核心訓練
+  resource_58:
+    name: 板球
+  resource_59:
+    name: 越野滑雪
+  resource_60:
+    name: 交叉訓練
+
+  resource_61:
+    name: 瑜珈
+  resource_62:
+    name: 冰壺
+  resource_63:
+    name: 踩單車
+  resource_64:
+    name: 舞蹈
+  resource_65:
+    name: 跳水
+  resource_66:
+    name: 高山滑雪
+  resource_67:
+    name: 鐵人兩項
+  resource_68:
+    name: 橢圓機
+  resource_69:
+    name: 擊劍
+  resource_70:
+    name: 曲棍球
+  resource_71:
+    name: 功能訓練
+  resource_72:
+    name: 高爾夫球
+  resource_73:
+    name: 體操
+  resource_74:
+    name: 手輪
+  resource_75:
+    name: 手球
+
+
+  resource_76:
+    name: 高強度間歇式訓練
+  resource_77:
+    name: 爬山
+  resource_78:
+    name: 騎馬
+  resource_79:
+    name: 打獵
+  resource_80:
+    name: 冰上曲棍球
+  resource_81:
+    name: 跳繩
+  resource_82:
+    name: 滑獨木舟
+  resource_83:
+    name: 跆拳道
+  resource_84:
+    name: 袋棍球
+  resource_85:
+    name: 武術
+  resource_86:
+    name: 混合式有氧運動
+  resource_87:
+    name: 越野摩托車
+  resource_88:
+    name: 登山自行車
+  resource_89:
+    name: 障礙賽跑
+  resource_90:
+    name: 划船
+
+  resource_91:
+    name: 立式划槳
+  resource_92:
+    name: 皮拉提斯
+  resource_93:
+    name: 健力
+  resource_94:
+    name: 美式壁球
+  resource_95:
+    name: 攀岩
+  resource_96:
+    name: 滾輪
+  resource_97:
+    name: 賽艇
+  resource_98:
+    name: 橄欖球
+  resource_99:
+    name: 跑步
+  resource_100:
+    name: 帆船
+  resource_101:
+    name: 滑板
+  resource_102:
+    name: 單板滑雪
+  resource_103:
+    name: 足球
+  resource_104:
+    name: 壘球
+  resource_105:
+    name: 飛輪
+
+  resource_106:
+    name: 壁球
+  resource_107:
+    name: 樓梯
+  resource_108:
+    name: 樓梯健身機
+  resource_109:
+    name: 踏步訓練機
+  resource_110:
+    name: 重訓
+  resource_111:
+    name: 衝浪
+  resource_112:
+    name: 游泳
+  resource_113:
+    name: 桌球
+  resource_114:
+    name: 太極
+  resource_115:
+    name: 網球
+  resource_116:
+    name: 田徑
+  resource_117:
+    name: 鐵人三項
+  resource_118:
+    name: 飛盤
+  resource_119:
+    name: 排球
+  resource_120:
+    name: 走路
+  resource_121:
+    name: 水球
+  resource_122:
+    name: 水中健身
+  resource_123:
+    name: 水上運動
+  resource_124:
+    name: 舉重
+  resource_125:
+    name: 輪椅
+  resource_126:
+    name: 摔角
+
 notification:
   symptom_follow_up:
     heading: 症狀持續發生嗎?

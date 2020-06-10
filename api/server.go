@@ -192,6 +192,8 @@ func (s *Server) setupRouter() *gin.Engine {
 	{
 		poiRoute.POST("", s.addPOI)
 		poiRoute.GET("", s.getPOI)
+		poiRoute.POST("/:poiID/resources", s.addPOIResources)
+		poiRoute.GET("/:poiID/resources", s.getPOIResources)
 		poiRoute.PATCH("/:poiID", s.updatePOIAlias)
 		poiRoute.DELETE("/:poiID", s.deletePOI)
 	}

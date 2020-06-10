@@ -288,6 +288,262 @@ conditions:
   covid_19:
     name: COVID-19
 
+resources:
+  resource_1:
+    name: Wearing face coverings
+  resource_2:
+    name: Wearing gloves
+  resource_3:
+    name: Temperature checks
+  resource_4:
+    name: Hand sanitizer
+  resource_5:
+    name: Surfaces disinfected
+  resource_6:
+    name: Hand-washing facilities
+  resource_7:
+    name: Clean restrooms
+  resource_8:
+    name: Social distancing measures
+  resource_9:
+    name: Good air circulation
+  resource_10:
+    name: Whole (unprocessed) foods diet
+  resource_11:
+    name: Mediterranean diet
+  resource_12:
+    name: Paleo diet
+  resource_13:
+    name: Vegan/plant-based diet
+  resource_14:
+    name: Vegetarian diet
+  resource_15:
+    name: Gluten-free diet
+  resource_16:
+    name: DASH
+  resource_17:
+    name: Zone diet
+  resource_18:
+    name: Flexitarian diet
+  resource_19:
+    name: Weight Watchers (WW) diet
+  resource_20:
+    name: Mayo Clinic diet
+  resource_21:
+    name: MIND
+  resource_22:
+    name: Volumetrics
+  resource_23:
+    name: Ornish diet
+  resource_24:
+    name: TLC diet
+  resource_25:
+    name: Anti-Inflammatory diet
+  resource_26:
+    name: Nordic diet
+  resource_27:
+    name: No-trans fat diet
+  resource_28:
+    name: Low glycemic index (low GI)
+  resource_29:
+    name: Low-fat diet
+  resource_30:
+    name: Low-sodium diet
+  resource_31:
+    name: Dairy-free / lactose-free
+  resource_32:
+    name: Raw food diet
+  resource_33:
+    name: Low-carb diet
+  resource_34:
+    name: No carbs no sugar diet
+  resource_35:
+    name: Ketogenic diet
+  resource_36:
+    name: Vitamin D
+  resource_37:
+    name: Calcium
+  resource_38:
+    name: Fish oil
+  resource_39:
+    name: Fish oil (omega-3 fatty acids)
+  resource_40:
+    name: Flaxseed (omega-3 fatty acids)
+  resource_41:
+    name: Fiber
+  resource_42:
+    name: Selenium
+  resource_43:
+    name: Prebiotics
+  resource_44:
+    name: Probiotics
+  resource_45:
+    name: Intermittent fasting
+  resource_46:
+    name: Fasting
+  resource_47:
+    name: American football
+  resource_48:
+    name: Archery
+  resource_49:
+    name: Australian football
+  resource_50:
+    name: Badminton
+  resource_51:
+    name: Barre
+  resource_52:
+    name: Baseball
+  resource_53:
+    name: Basketball
+  resource_54:
+    name: Bowling
+  resource_55:
+    name: Boxing
+  resource_56:
+    name: Climbing
+  resource_57:
+    name: Core training
+  resource_58:
+    name: Cricket
+  resource_59:
+    name: Cross-country skiing
+  resource_60:
+    name: Cross training
+  resource_61:
+    name: Yoga
+  resource_62:
+    name: Curling
+  resource_63:
+    name: Cycling
+  resource_64:
+    name: Dance
+  resource_65:
+    name: Diving
+  resource_66:
+    name: Downhill skiing
+  resource_67:
+    name: Duathlon
+  resource_68:
+    name: Elliptical
+  resource_69:
+    name: Fencing
+  resource_70:
+    name: Field Hockey
+  resource_71:
+    name: Functional training
+  resource_72:
+    name: Golf
+  resource_73:
+    name: Gymnastics
+  resource_74:
+    name: Hand cycling
+  resource_75:
+    name: Handball
+  resource_76:
+    name: High-Intensity Interval Training (HIIT)
+  resource_77:
+    name: Hiking
+  resource_78:
+    name: Horseback riding
+  resource_79:
+    name: Hunting
+  resource_80:
+    name: Ice hockey
+  resource_81:
+    name: Jumping rope
+  resource_82:
+    name: Kayaking
+  resource_83:
+    name: Kickboxing
+  resource_84:
+    name: Lacrosse
+  resource_85:
+    name: Martial arts
+  resource_86:
+    name: Mixed cardio
+  resource_87:
+    name: Motocross
+  resource_88:
+    name: Mountain biking
+  resource_89:
+    name: Obstacle course racing
+  resource_90:
+    name: Paddling
+  resource_91:
+    name: Paddleboarding
+  resource_92:
+    name: Pilates
+  resource_93:
+    name: Powerlifting
+  resource_94:
+    name: Racquetball
+  resource_95:
+    name: Rock climbing
+  resource_96:
+    name: Rolling
+  resource_97:
+    name: Rowing
+  resource_98:
+    name: Rugby
+  resource_99:
+    name: Running
+  resource_100:
+    name: Sailing
+  resource_101:
+    name: Skateboarding
+  resource_102:
+    name: Snowboarding
+  resource_103:
+    name: Soccer
+  resource_104:
+    name: Softball
+  resource_105:
+    name: Spinning
+  resource_106:
+    name: Squash
+  resource_107:
+    name: Stairs
+  resource_108:
+    name: Stairmaster
+  resource_109:
+    name: Step trainer
+  resource_110:
+    name: Strength training
+  resource_111:
+    name: Surfing
+  resource_112:
+    name: Swimming
+  resource_113:
+    name: Table tennis
+  resource_114:
+    name: Tai Chi
+  resource_115:
+    name: Tennis
+  resource_116:
+    name: Track & field
+  resource_117:
+    name: Triathlon
+  resource_118:
+    name: Ultimate (frisbee)
+  resource_119:
+    name: Volleyball
+  resource_120:
+    name: Walking
+  resource_121:
+    name: Water polo
+  resource_122:
+    name: Water fitness
+  resource_123:
+    name: Water sports
+  resource_124:
+    name: Weightlifting
+  resource_125:
+    name: Wheelchair
+  resource_126:
+    name: Wrestling
+  resource_127:
+    name: Yoga
+
 notification:
   symptom_follow_up:
     heading: Still experiencing symptoms?

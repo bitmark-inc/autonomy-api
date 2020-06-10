@@ -28,6 +28,7 @@ import (
 	"github.com/bitmark-inc/autonomy-api/api"
 	"github.com/bitmark-inc/autonomy-api/external/aqi"
 	"github.com/bitmark-inc/autonomy-api/geo"
+	"github.com/bitmark-inc/autonomy-api/store"
 	"github.com/bitmark-inc/autonomy-api/utils"
 
 	bitmarksdk "github.com/bitmark-inc/bitmark-sdk-go"
@@ -122,6 +123,8 @@ func main() {
 	initLog()
 
 	utils.InitI18NBundle()
+	utils.PanicIfError(store.LoadDefaultPOIResources("en"))
+	utils.PanicIfError(store.LoadDefaultPOIResources("zh_tw"))
 
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,

@@ -11,8 +11,9 @@ type RatingResourceSort []RatingResource
 type POIResourceRatingSort []POIResourceRating
 
 type Resource struct {
-	ID   string `json:"id" bson:"id"`
-	Name string `json:"name" bson:"name"`
+	ID        string `json:"id" bson:"id"`
+	Name      string `json:"name" bson:"name"`
+	Important bool   `json:"-" bson:"-"`
 }
 
 type RatingResource struct {
@@ -33,7 +34,7 @@ type POIResourceRating struct {
 }
 
 type POIRatingsMetric struct {
-	Resources  []POIResourceRating `json:"resources" bson:"resources"`
+	Resources  []POIResourceRating `json:"resources" bson:"resources,omitempty"`
 	LastUpdate int64               `json:"last_update" bson:"last_update"`
 }
 
