@@ -29,7 +29,7 @@ type Symptom interface {
 	ListCustomizedSymptoms() ([]schema.Symptom, error)
 	SymptomReportSave(data *schema.SymptomReportData) error
 	FindSymptomsByIDs(ids []string) ([]schema.Symptom, error)
-	FindNearbySymptomDistribution(dist int, loc schema.Location, start, end int64) (schema.SymptomDistribution, error)
+	FindNearbySymptomDistribution(dist int, loc schema.Location, start, end int64) (map[string]int, error)
 	FindNearbyNonOfficialSymptoms(dist int, loc schema.Location) ([]schema.Symptom, error)
 	GetSymptomCount(profileID string, loc *schema.Location, dist int, now time.Time) (int, int, error)
 }
@@ -230,7 +230,7 @@ func (m *mongoDB) FindSymptomsByIDs(ids []string) ([]schema.Symptom, error) {
 // | userB | [fever] 			    |
 //
 // symptom_distribution = {fever: 2, cough: 1, nasal: 1}
-func (m *mongoDB) FindNearbySymptomDistribution(dist int, loc schema.Location, start, end int64) (schema.SymptomDistribution, error) {
+func (m *mongoDB) FindNearbySymptomDistribution(dist int, loc schema.Location, start, end int64) (map[string]int, error) {
 	c := m.client.Database(m.database).Collection(schema.SymptomReportCollection)
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()

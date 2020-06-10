@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
@@ -151,37 +152,37 @@ func (s *ConfirmCDSTestSuite) ExpectDocCount(country string, expectCount int64) 
 
 func (s *ConfirmCDSTestSuite) LoadExpectedData() {
 	s.ExpectContinue = []schema.CDSScoreDataSet{
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 1},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 1},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
 	}
 	s.ExpectContinueTimeBefore = []schema.CDSScoreDataSet{
-		schema.CDSScoreDataSet{Cases: 1},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
-		schema.CDSScoreDataSet{Cases: 0},
+		{Cases: 1},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
+		{Cases: 0},
 	}
 
 	s.ExpectActiveConfirm = ExpectActiveConfirm{Active: 19, Delta: -1, RateChangeRoundEven: -5}
@@ -245,18 +246,20 @@ func (s *ConfirmCDSTestSuite) TestReplaceCDS() {
 }
 
 func (s *ConfirmCDSTestSuite) TestGetCDSActive() {
+	// [2020-05-26] active = 19.0
+	// [2020-05-25] N/A
+	// [2020-05-24] active = 20.0
 	loc := schema.Location{AddressComponent: schema.AddressComponent{Country: schema.CdsTaiwan}}
+	referenceTime := time.Date(2020, 5, 26, 8, 0, 0, 0, time.UTC).UTC().Unix()
 	store := NewMongoStore(s.mongoClient, s.testDBName)
-	active, delta, changeRate, err := store.GetCDSActive(loc)
+	active, delta, changeRate, err := store.GetCDSActive(loc, referenceTime)
 	s.NoError(err)
-	// "cases" : 441.0,     "deaths" : 7.0,    "active" : 19.0,  "report_ts":1590451200
-	// "cases" : 441.0,      "deaths" : 7.0,     "recovered" : 414.0,     "active" : 20.0,  "report_ts":1590249600
 	s.Equal(s.ConfirmExpected.ExpectActiveConfirm.Active, active)
 	s.Equal(s.ConfirmExpected.ExpectActiveConfirm.Delta, delta)
 	s.Equal(s.ConfirmExpected.ExpectActiveConfirm.RateChangeRoundEven, math.RoundToEven(changeRate))
 
 	loc = schema.Location{AddressComponent: schema.AddressComponent{Country: "Neverland"}}
-	active, delta, changeRate, err = store.GetCDSActive(loc)
+	active, delta, changeRate, err = store.GetCDSActive(loc, referenceTime)
 	s.Equal(err, ErrNoConfirmDataset)
 	s.Equal(s.ConfirmExpected.ExpectActiveNoDataSet.Active, active)
 	s.Equal(s.ConfirmExpected.ExpectActiveNoDataSet.Delta, delta)
@@ -289,6 +292,7 @@ func (s *ConfirmCDSTestSuite) TestDeleteCDSUnused() {
 	s.NoError(err)
 	s.ExpectDocCount(schema.CdsTaiwan, 0)
 }
+
 func TestConfirmTestSuite(t *testing.T) {
 	suite.Run(t, NewConfirmTestSuite("mongodb://127.0.0.1:27017/?compressors=disabled", "test-db"))
 }

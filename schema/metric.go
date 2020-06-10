@@ -31,7 +31,7 @@ type SymptomDetail struct {
 }
 
 type NearestSymptomData struct {
-	WeightDistribution SymptomDistribution `json:"weight_distribution" bson:"weight_distribution"`
+	WeightDistribution map[string]int `json:"weight_distribution" bson:"weight_distribution"`
 }
 
 type Details struct {
