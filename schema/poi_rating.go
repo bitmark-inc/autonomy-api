@@ -1,15 +1,20 @@
 package schema
 
 var DefaultResources = map[string]string{
-	"resource_1": "plant-based food",
-	"resource_2": "organic food",
-	"resource_3": "low glycemic index (low-GI) food",
-	"resource_4": "farm-to-table food",
-	"resource_5": "farm-to-table foodxx",
+	"resource_1":  "plant-based food",
+	"resource_2":  "organic food",
+	"resource_3":  "low glycemic index (low-GI) food",
+	"resource_4":  "farm-to-table food",
+	"resource_5":  "Wearing gloves",
+	"resource_6":  "Social distancing measures",
+	"resource_7":  "Good air circulation",
+	"resource_8":  " Whole (unprocessed) foods diet",
+	"resource_9":  "Vegan/plant-based diet",
+	"resource_10": "Vegetarian diet",
+	"resource_11": "Zone diet",
+	"resource_12": "TLC diet",
+	"resource_13": "No-trans fat diet",
 }
-
-type RatingResourceSort []RatingResource
-type POIResourceRatingSort []POIResourceRating
 
 type Resource struct {
 	ID        string `json:"id" bson:"id"`
@@ -41,11 +46,3 @@ type POIRatingsMetric struct {
 	Resources  []POIResourceRating `json:"resources" bson:"resources,omitempty"`
 	LastUpdate int64               `json:"last_update" bson:"last_update"`
 }
-
-func (r RatingResourceSort) Len() int           { return len(r) }
-func (r RatingResourceSort) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
-func (r RatingResourceSort) Less(i, j int) bool { return r[i].Score < r[j].Score }
-
-func (r POIResourceRatingSort) Len() int           { return len(r) }
-func (r POIResourceRatingSort) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
-func (r POIResourceRatingSort) Less(i, j int) bool { return r[i].Score < r[j].Score }

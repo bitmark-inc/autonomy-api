@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -178,7 +179,9 @@ func (s *Server) placeProfile(c *gin.Context) {
 			}
 		}
 	}
-
+	sort.SliceStable(resources, func(i, j int) bool {
+		return resources[i].Score > resources[j].Score // Inverse sort
+	})
 	// metric
 	metric, err := s.mongoStore.SyncAccountPOIMetrics(accountNumber, profile.ScoreCoefficient, poiID)
 	if err != nil {
