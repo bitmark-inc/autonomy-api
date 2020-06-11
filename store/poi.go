@@ -131,6 +131,8 @@ type POI interface {
 
 	AddPOIResources(poiID primitive.ObjectID, resources []schema.Resource, lang string) ([]schema.Resource, error)
 	GetPOIResources(poiID primitive.ObjectID, importantOnly bool, lang string) ([]schema.Resource, error)
+	GetPOIResourceMetric(poiID primitive.ObjectID) (schema.POIRatingsMetric, error)
+	UpdatePOIRatingMetric(poiID primitive.ObjectID, ratings []schema.RatingResource) error
 }
 
 // AddPOI inserts a new POI record if it doesn't exist and append it to user's profile
