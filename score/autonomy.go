@@ -1,7 +1,6 @@
 package score
 
 import (
-	"fmt"
 	"github.com/bitmark-inc/autonomy-api/schema"
 )
 

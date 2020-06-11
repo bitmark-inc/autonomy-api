@@ -88,7 +88,10 @@ func (s *Server) getProfileRatings(c *gin.Context) {
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 		return
 	}
-	sort.Sort(schema.RatingResourceSort(metric.Resources))
+
+	sort.SliceStable(metric.Resources, func(i, j int) bool {
+		return metric.Resources[i].Score > metric.Resources[j].Score // Inverse sort
+	})
 	c.JSON(http.StatusOK, gin.H{"ratings": metric.Resources})
 }
 
