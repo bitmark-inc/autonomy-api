@@ -603,7 +603,6 @@ func (m *mongoDB) GetProfilePOIRatingMetric(accountNumber string, id string) (sc
 		}).Error("get profile fail")
 		return schema.ProfileRatingsMetric{}, err
 	}
-	log.Info("result.PointsOfInterest :", result.PointsOfInterest)
 	for _, p := range result.PointsOfInterest {
 		if p.ID.Hex() == id {
 			return p.ResourceRatings, nil

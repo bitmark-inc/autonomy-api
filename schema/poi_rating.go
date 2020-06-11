@@ -5,6 +5,7 @@ var DefaultResources = map[string]string{
 	"resource_2": "organic food",
 	"resource_3": "low glycemic index (low-GI) food",
 	"resource_4": "farm-to-table food",
+	"resource_5": "farm-to-table foodxx",
 }
 
 type RatingResourceSort []RatingResource
@@ -27,10 +28,13 @@ type ProfileRatingsMetric struct {
 }
 
 type POIResourceRating struct {
-	Resource   `json:"resource" bson:"resource"`
-	SumOfScore float64 `json:"-" bson:"sum"`
-	Score      float64 `json:"score" bson:"score"`
-	Ratings    int64   `json:"ratings" json:"ratings"`
+	Resource       `json:"resource" bson:"resource"`
+	SumOfScore     float64 `json:"-" bson:"sum"`
+	Score          float64 `json:"score" bson:"score"`
+	Ratings        int64   `json:"ratings" bson:"ratings"`
+	LastUpdate     int64   `json:"-" bson:"last_update"`
+	LastDayScore   float64 `json:"-" bson:"last_day_score"`
+	LastDayRatings int64   `json:"-" bson:"last_day_rating"`
 }
 
 type POIRatingsMetric struct {

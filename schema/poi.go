@@ -19,7 +19,7 @@ type POI struct {
 	State           string             `bson:"state" json:"-"`
 	County          string             `bson:"county" json:"-"`
 	PlaceType       string             `bson:"place_type" json:"-"`
-	ResourceRatings POIRatingsMetric   `bson:"resource_ratings" json:"-"`
+	ResourceRatings POIRatingsMetric   `bson:"rating_metric" json:"-"`
 }
 
 type ProfilePOI struct {
