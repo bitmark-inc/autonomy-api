@@ -24,6 +24,7 @@ func (s *Server) autonomyProfile(c *gin.Context) {
 		s.currentAreaProfile(c)
 		return
 	}
+	s.placeProfile(c)
 }
 
 func (s *Server) singleAreaProfile(c *gin.Context) {
@@ -108,4 +109,95 @@ func (s *Server) currentAreaProfile(c *gin.Context) {
 		"individual":           individualMetric,
 		"neighbor":             metric,
 	})
+}
+
+func (s *Server) placeProfile(c *gin.Context) {
+	accountNumber := c.GetString("requester")
+
+	profile, err := s.mongoStore.GetProfile(accountNumber)
+	if err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+
+	poiID, err := primitive.ObjectIDFromHex(c.Param("poiID"))
+	if err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, fmt.Errorf("invalid POI ID"))
+		return
+	}
+
+	// resources
+	var params struct {
+		Language     string `form:"lang"`
+		AllReosurces bool   `form:"all_resources"`
+	}
+	if err := c.Bind(&params); err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
+		return
+	}
+
+	if "" == params.Language {
+		params.Language = "en"
+	}
+
+	var profilePoi schema.ProfilePOI
+	for _, p := range profile.PointsOfInterest {
+		if p.ID == poiID {
+			profilePoi = p
+			break
+		}
+	}
+
+	// Get POI Resources
+	poi, err := s.mongoStore.GetPOI(poiID)
+	if err != nil {
+		c.Error(err)
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+	var resp struct {
+		ID              string                     `json:"id"`
+		Alias           string                     `json:"alias"`
+		Address         string                     ` json:"address"`
+		Location        *schema.GeoJSON            `json:"location"`
+		Rating          bool                       `json:"rating"`
+		HasMoreResource bool                       `json:"has_more_resources"`
+		Metric          schema.Metric              `json:"neighbor"`
+		Resources       []schema.POIResourceRating `json:"resources"`
+		Score           float64                    `json:"autonomy_score"`
+		ScoreDelta      float64                    `json:"autonomy_score_delta"`
+	}
+
+	resources := []schema.POIResourceRating{}
+	resources = poi.ResourceRatings.Resources
+	if !params.AllReosurces { // return all resources
+		if len(poi.ResourceRatings.Resources) >= 10 {
+			resources = poi.ResourceRatings.Resources[:10]
+			if len(poi.ResourceRatings.Resources) > 10 {
+				resp.HasMoreResource = false
+			}
+		}
+	}
+
+	// metric
+	metric, err := s.mongoStore.SyncAccountPOIMetrics(accountNumber, profile.ScoreCoefficient, poiID)
+	if err != nil {
+		c.Error(err)
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+	score, delta := score.CalculatePOIAutonomyScore(resources, *metric)
+	resp.ID = poi.ID.Hex()
+	resp.Alias = profilePoi.Alias
+	resp.Address = profilePoi.Address
+	resp.Location = poi.Location
+	if len(profilePoi.ResourceRatings.Resources) > 0 {
+		resp.Rating = true
+	}
+	resp.Score = score
+	resp.ScoreDelta = delta
+	resp.Metric = *metric
+	resp.Resources = resources
+
+	c.JSON(http.StatusOK, resp)
 }

@@ -31,18 +31,18 @@ func (s *Server) updatePOIRating(c *gin.Context) {
 		Score      int    `json:"score"`
 	}
 
-	var params struct {
+	var body struct {
 		Ratings []userRating `json:"ratings"`
 	}
 
-	if err := c.BindJSON(&params); err != nil {
+	if err := c.BindJSON(&body); err != nil {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
 		return
 	}
 
 	var profileMetric schema.ProfileRatingsMetric
 
-	for _, r := range params.Ratings {
+	for _, r := range body.Ratings {
 		name := s.getResourceName(r.ResourceID)
 		if "" == name {
 			continue
@@ -88,7 +88,6 @@ func (s *Server) getProfileRatings(c *gin.Context) {
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 		return
 	}
-	log.Info("metric-----", metric)
 	sort.Sort(schema.RatingResourceSort(metric.Resources))
 	c.JSON(http.StatusOK, gin.H{"ratings": metric.Resources})
 }
