@@ -143,6 +143,8 @@ func (s *Server) setupRouter() *gin.Engine {
 		accountRoute.PATCH("/me", s.accountUpdateMetadata)
 		accountRoute.DELETE("/me", s.accountDelete)
 
+		accountRoute.PUT("/me/poi_order", s.updatePOIOrder)
+
 		accountRoute.GET("/me/profile_formula", s.getProfileFormula)
 		accountRoute.PUT("/me/profile_formula", s.updateProfileFormula)
 		accountRoute.DELETE("/me/profile_formula", s.resetProfileFormula)
@@ -190,7 +192,6 @@ func (s *Server) setupRouter() *gin.Engine {
 	{
 		poiRoute.POST("", s.addPOI)
 		poiRoute.GET("", s.getPOI)
-		poiRoute.PUT("/order", s.updatePOIOrder)
 		poiRoute.PATCH("/:poiID", s.updatePOIAlias)
 		poiRoute.DELETE("/:poiID", s.deletePOI)
 	}
