@@ -208,6 +208,8 @@ func (s *Server) setupRouter() *gin.Engine {
 		areaProfile.GET("/:poiID", s.singleAreaProfile)
 	}
 
+	apiRoute.POST("/scores", s.calculateScore)
+
 	r.GET("/healthz", s.healthz)
 
 	symptomRoute := apiRoute.Group("/symptoms")

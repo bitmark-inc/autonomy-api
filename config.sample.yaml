@@ -36,6 +36,8 @@ onesignal:
   template:
     new_location_status_change:
     saved_location_status_change:
+nominatim:
+  endpoint:
 clients:
   android:
     minimum_client_version: 1

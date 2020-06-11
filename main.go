@@ -196,6 +196,8 @@ func main() {
 		),
 	)
 
+	geo.SetLocationSearcher(geo.NewNominatimSearcher(viper.GetString("nominatim.endpoint")))
+
 	aqiClient := aqi.New(viper.GetString("aqi.key"), "")
 
 	// Init http server
