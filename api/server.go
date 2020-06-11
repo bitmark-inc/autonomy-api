@@ -192,8 +192,11 @@ func (s *Server) setupRouter() *gin.Engine {
 	{
 		poiRoute.POST("", s.addPOI)
 		poiRoute.GET("", s.getPOI)
+		poiRoute.PUT("/order", s.updatePOIOrder)
 		poiRoute.PATCH("/:poiID", s.updatePOIAlias)
 		poiRoute.DELETE("/:poiID", s.deletePOI)
+		poiRoute.PUT("/:poiID/resource-ratings", s.updatePOIRating)
+		poiRoute.GET("/:poiID/resource-ratings", s.getProfileRatings)
 	}
 
 	autonomyProfile := apiRoute.Group("/autonomy_profile")

@@ -35,6 +35,10 @@ type POI interface {
 	UpdatePOIOrder(accountNumber string, poiOrder []string) error
 	DeletePOI(accountNumber string, poiID primitive.ObjectID) error
 	NearestPOI(distance int, cords schema.Location) ([]primitive.ObjectID, error)
+
+	// resources
+	GetPOIResourceMetric(poiID primitive.ObjectID) (schema.POIRatingsMetric, error)
+	UpdatePOIRatingMetric(poiID primitive.ObjectID, ratings []schema.RatingResource) error
 }
 
 // AddPOI inserts a new POI record if it doesn't exist and append it to user's profile
