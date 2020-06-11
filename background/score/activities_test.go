@@ -111,7 +111,7 @@ func (ts *ScoreActivityTestSuite) TestCalculatePOIStateActivity() {
 		EXPECT().
 		AddScoreRecord(
 			gomock.Eq(ts.testPOIID),
-			gomock.Any(),
+			schema.ScoreRecordTypePOI,
 			gomock.Eq(25.0), // symptom = 100, behavior = 0, case = 0
 			gomock.AssignableToTypeOf(int64(1)),
 		).
@@ -890,7 +890,7 @@ func (ts *ScoreActivityTestSuite) TestCalculateAccountStateActivityNormal() {
 		EXPECT().
 		AddScoreRecord(
 			gomock.Eq(ts.testAccountNumber),
-			gomock.Any(),
+			schema.ScoreRecordTypeIndividual,
 			gomock.Eq(85.0), // 0.8*100 + 0.2*25
 			gomock.AssignableToTypeOf(int64(1)),
 		).

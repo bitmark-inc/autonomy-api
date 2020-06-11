@@ -7,8 +7,8 @@ const (
 type ScoreRecordType string
 
 const (
-	ScoreRecordTypeIndividual = "individual"
-	ScoreRecordTypePOI        = "poi"
+	ScoreRecordTypeIndividual = ScoreRecordType("individual")
+	ScoreRecordTypePOI        = ScoreRecordType("poi")
 )
 
 type ScoreRecord struct {
