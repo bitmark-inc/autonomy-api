@@ -146,6 +146,7 @@ func (s *BehaviorTestSuite) TestFindBehaviorDistribution() {
 
 	start := time.Date(2020, 5, 26, 0, 0, 0, 0, time.UTC).UTC().Unix()
 	end := time.Date(2020, 5, 26, 24, 0, 0, 0, time.UTC).UTC().Unix()
+
 	distribution, err := store.FindBehaviorDistribution("",
 		&schema.Location{
 			Longitude: locationBitmark.Coordinates[0],
@@ -159,7 +160,12 @@ func (s *BehaviorTestSuite) TestFindBehaviorDistribution() {
 		"new_behavior":      1,
 	}, distribution)
 
-	// TODO: test personal
+	distribution, err = store.FindBehaviorDistribution("userA", nil, s.neighborhoodRadius, start, end)
+	s.NoError(err)
+	s.Equal(map[string]int{
+		"clean_hand":        2,
+		"social_distancing": 2,
+	}, distribution)
 }
 
 func (s *BehaviorTestSuite) TestFindNearbyBehaviorReportTimes() {
