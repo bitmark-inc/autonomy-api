@@ -20,17 +20,17 @@ func TestGenerateIntevalReport(t *testing.T) {
 	assert.Equal(t, map[string]*reportItem{
 		"a": {
 			Name:       "",
-			Count:      3,
+			Value:      3,
 			ChangeRate: 100,
 		},
 		"b": {
 			Name:       "",
-			Count:      5,
+			Value:      5,
 			ChangeRate: 150,
 		},
 		"c": {
 			Name:       "",
-			Count:      0,
+			Value:      0,
 			ChangeRate: -100,
 		},
 	}, entries)

@@ -37,7 +37,7 @@ type reportItemQueryParams struct {
 
 type reportItem struct {
 	Name       string  `json:"name"`
-	Count      int     `json:"count"`
+	Value      int     `json:"value"`
 	ChangeRate float64 `json:"change_rate"`
 }
 
@@ -211,17 +211,17 @@ func (s *Server) getReportItems(c *gin.Context) {
 // and determines respective count and change rate for each item.
 func gatherReportItems(currentDistribution, previousDistribution map[string]int) map[string]*reportItem {
 	items := make(map[string]*reportItem)
-	for itemID, count := range currentDistribution {
+	for itemID, value := range currentDistribution {
 		// For each reported item shown in this period, assume it's not reported in the previous period,
 		// So the change rate is 100 by default.
 		// If it's also reported in the previous period, the rate will be adjusted accordingly.
-		items[itemID] = &reportItem{Count: count, ChangeRate: 100}
+		items[itemID] = &reportItem{Value: value, ChangeRate: 100}
 	}
-	for itemID, count := range previousDistribution {
+	for itemID, value := range previousDistribution {
 		if _, ok := items[itemID]; ok { // reported both in the current and previous periods
-			items[itemID].ChangeRate = score.ChangeRate(float64(items[itemID].Count), float64(count))
+			items[itemID].ChangeRate = score.ChangeRate(float64(items[itemID].Value), float64(value))
 		} else { // only reported in the previous period
-			items[itemID] = &reportItem{Count: 0, ChangeRate: -100}
+			items[itemID] = &reportItem{Value: 0, ChangeRate: -100}
 		}
 	}
 	return items
