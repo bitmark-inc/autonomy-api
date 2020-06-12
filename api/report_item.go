@@ -42,45 +42,46 @@ type reportItem struct {
 }
 
 func (s *Server) getReportItems(c *gin.Context) {
+	account, ok := c.MustGet("account").(*schema.Account)
+	if !ok {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer)
+		return
+	}
+
 	var params reportItemQueryParams
 	if err := c.Bind(&params); err != nil {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
 		return
 	}
+	currentPeriodStart := params.Start
+	currentPeriodEnd := params.End
+	previousPeriodStart := 2*params.Start - params.End
+	previousPeriodEnd := params.Start
+	localizer := utils.NewLocalizer(params.Language)
 
-	c.Set("reportType", params.Type)
-	c.Set("currentPeriodStart", params.Start)
-	c.Set("currentPeriodEnd", params.End)
-	c.Set("previousPeriodStart", 2*params.Start-params.End)
-	c.Set("previousPeriodEnd", params.Start)
-	c.Set("language", params.Language)
-
+	var profileID string
+	var loc schema.Location
+	var scoreOwner string
 	switch params.Scope {
 	case reportItemScopeIndividual:
-		// TODO: handle individual
+		profileID = account.ProfileID.String()
+		scoreOwner = account.AccountNumber
 	case reportItemScopeNeighborhood:
-		a := c.MustGet("account")
-		account, ok := a.(*schema.Account)
-		if !ok {
-			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer)
-			return
-		}
-		loc := account.Profile.State.LastLocation
-		if loc == nil {
+		if lastLocation := account.Profile.State.LastLocation; lastLocation == nil {
 			abortWithEncoding(c, http.StatusBadRequest, errorUnknownAccountLocation)
 			return
+		} else {
+			loc = *lastLocation
 		}
 		if loc.Country == "" {
-			log.Info("fetch poi geo info from external service")
-			resolvedLococation, err := geo.PoliticalGeoInfo(*loc)
+			resolvedLococation, err := geo.PoliticalGeoInfo(loc)
 			if err != nil {
 				log.WithError(err).WithField("location", loc).Error("failed to fetch geo info")
+				abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+				return
 			}
-			c.Set("location", resolvedLococation)
-		} else {
-			c.Set("location", *loc)
+			loc = resolvedLococation
 		}
-		s.getLocationBasedReportItems(c)
 	case reportItemScopePOI:
 		poiID, err := primitive.ObjectIDFromHex(params.PoiID)
 		if err != nil {
@@ -92,7 +93,7 @@ func (s *Server) getReportItems(c *gin.Context) {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
 		}
-		location := schema.Location{
+		loc = schema.Location{
 			Latitude:  poi.Location.Coordinates[1],
 			Longitude: poi.Location.Coordinates[0],
 			AddressComponent: schema.AddressComponent{
@@ -101,32 +102,39 @@ func (s *Server) getReportItems(c *gin.Context) {
 				County:  poi.County,
 			},
 		}
-		c.Set("location", location)
-		s.getLocationBasedReportItems(c)
+		scoreOwner = params.PoiID
+	default:
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters)
+		return
 	}
-}
 
-func (s *Server) getLocationBasedReportItems(c *gin.Context) {
-	loc := c.Keys["location"].(schema.Location)
-	reportType := c.GetString("reportType")
-	currStart := c.GetInt64("currentPeriodStart")
-	currEnd := c.GetInt64("currentPeriodEnd")
-	prevStart := c.GetInt64("previousPeriodStart")
-	prevEnd := c.GetInt64("previousPeriodEnd")
-	lang := c.GetString("language")
-
-	localizer := utils.NewLocalizer(lang)
-
-	switch reportType {
+	switch params.Type {
 	case reportItemTypeScore:
-		// TODO: handle score
-	case reportItemTypeSymptom:
-		currentDistribution, err := s.mongoStore.FindNearbySymptomDistribution(consts.NEARBY_DISTANCE_RANGE, loc, currStart, currEnd)
+		currAvgScore, err := s.mongoStore.GetScoreAverage(scoreOwner, currentPeriodStart, currentPeriodEnd)
 		if err != nil {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
 		}
-		previousDistribution, err := s.mongoStore.FindNearbySymptomDistribution(consts.NEARBY_DISTANCE_RANGE, loc, prevStart, prevEnd)
+		prevAvgScore, err := s.mongoStore.GetScoreAverage(scoreOwner, previousPeriodStart, previousPeriodEnd)
+		if err != nil {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+			return
+		}
+		results := gatherReportItems(
+			map[string]int{"autonomy_score": int(currAvgScore)},
+			map[string]int{"autonomy_score": int(prevAvgScore)})
+		items := getReportItemsForDisplay(results, func(scoreID string) string {
+			// TODO: translate
+			return scoreID
+		})
+		c.JSON(http.StatusOK, gin.H{"report_items": items})
+	case reportItemTypeSymptom:
+		currentDistribution, err := s.mongoStore.FindSymptomDistribution(profileID, &loc, consts.NEARBY_DISTANCE_RANGE, currentPeriodStart, currentPeriodEnd, false)
+		if err != nil {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+			return
+		}
+		previousDistribution, err := s.mongoStore.FindSymptomDistribution(profileID, &loc, consts.NEARBY_DISTANCE_RANGE, previousPeriodStart, previousPeriodEnd, false)
 		if err != nil {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
@@ -146,12 +154,12 @@ func (s *Server) getLocationBasedReportItems(c *gin.Context) {
 		})
 		c.JSON(http.StatusOK, gin.H{"report_items": items})
 	case reportItemTypeBehavior:
-		currentDistribution, err := s.mongoStore.FindNearbyBehaviorDistribution(consts.NEARBY_DISTANCE_RANGE, loc, currStart, currEnd)
+		currentDistribution, err := s.mongoStore.FindBehaviorDistribution(profileID, &loc, consts.NEARBY_DISTANCE_RANGE, currentPeriodStart, currentPeriodEnd)
 		if err != nil {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
 		}
-		previousDistribution, err := s.mongoStore.FindNearbyBehaviorDistribution(consts.NEARBY_DISTANCE_RANGE, loc, prevStart, prevEnd)
+		previousDistribution, err := s.mongoStore.FindBehaviorDistribution(profileID, &loc, consts.NEARBY_DISTANCE_RANGE, previousPeriodStart, previousPeriodEnd)
 		if err != nil {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
@@ -171,12 +179,12 @@ func (s *Server) getLocationBasedReportItems(c *gin.Context) {
 		})
 		c.JSON(http.StatusOK, gin.H{"report_items": items})
 	case reportItemTypeCase:
-		currActiveCount, _, _, err := s.mongoStore.GetCDSActive(loc, currEnd)
+		currActiveCount, _, _, err := s.mongoStore.GetCDSActive(loc, currentPeriodEnd)
 		if err != nil {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
 		}
-		prevActiveCount, _, _, err := s.mongoStore.GetCDSActive(loc, prevEnd)
+		prevActiveCount, _, _, err := s.mongoStore.GetCDSActive(loc, previousPeriodEnd)
 		if err != nil {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return

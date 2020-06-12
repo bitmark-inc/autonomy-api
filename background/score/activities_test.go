@@ -6,15 +6,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitmark-inc/autonomy-api/external/cadence"
-	"github.com/bitmark-inc/autonomy-api/mocks"
-	"github.com/bitmark-inc/autonomy-api/schema"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"
+
+	"github.com/bitmark-inc/autonomy-api/external/cadence"
+	"github.com/bitmark-inc/autonomy-api/mocks"
+	"github.com/bitmark-inc/autonomy-api/schema"
 )
 
 var (
@@ -99,7 +100,6 @@ func (ts *ScoreActivityTestSuite) TestCalculatePOIStateActivity() {
 		EXPECT().
 		GetPOI(gomock.Eq(poiID)).
 		Return(regularPOI, nil)
-
 	ts.mongoMock.
 		EXPECT().
 		CollectRawMetrics(gomock.Eq(schema.Location{
@@ -107,6 +107,15 @@ func (ts *ScoreActivityTestSuite) TestCalculatePOIStateActivity() {
 			Longitude: regularPOI.Location.Coordinates[0],
 		})).
 		Return(&schema.Metric{}, nil)
+	ts.mongoMock.
+		EXPECT().
+		AddScoreRecord(
+			gomock.Eq(ts.testPOIID),
+			schema.ScoreRecordTypePOI,
+			gomock.Eq(25.0), // symptom = 100, behavior = 0, case = 0
+			gomock.AssignableToTypeOf(int64(1)),
+		).
+		Return(nil)
 
 	values, err := ts.env.ExecuteActivity(ts.worker.CalculatePOIStateActivity, ts.testPOIID)
 	ts.NoError(err)
@@ -860,6 +869,10 @@ func (ts *ScoreActivityTestSuite) TestCalculateAccountStateActivityNormal() {
 		Location: &schema.GeoJSON{
 			Coordinates: []float64{120.1256, 25.1256},
 		},
+		IndividualMetric: schema.IndividualMetric{
+			Score:          100.0,
+			ScoreYesterday: 0.0,
+		},
 	}
 	ts.mongoMock.
 		EXPECT().
@@ -873,6 +886,15 @@ func (ts *ScoreActivityTestSuite) TestCalculateAccountStateActivityNormal() {
 			Longitude: testProfile.Location.Coordinates[0],
 		})).
 		Return(&schema.Metric{}, nil)
+	ts.mongoMock.
+		EXPECT().
+		AddScoreRecord(
+			gomock.Eq(ts.testAccountNumber),
+			schema.ScoreRecordTypeIndividual,
+			gomock.Eq(85.0), // 0.8*100 + 0.2*25
+			gomock.AssignableToTypeOf(int64(1)),
+		).
+		Return(nil)
 
 	_, err := ts.env.ExecuteActivity(ts.worker.CalculateAccountStateActivity, ts.testAccountNumber)
 	ts.NoError(err)
