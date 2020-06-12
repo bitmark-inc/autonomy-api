@@ -26,6 +26,17 @@ func (s *Server) updatePOIRating(c *gin.Context) {
 		return
 	}
 
+	var params struct {
+		Language string `form:"lang"`
+	}
+
+	if err := c.BindQuery(&params); err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
+		return
+	}
+	if "" == params.Language {
+		params.Language = "en"
+	}
 	type userRating struct {
 		ResourceID string `json:"resource_id"`
 		Score      int    `json:"score"`
@@ -43,8 +54,9 @@ func (s *Server) updatePOIRating(c *gin.Context) {
 	var profileMetric schema.ProfileRatingsMetric
 
 	for _, r := range body.Ratings {
-		name := s.getResourceName(r.ResourceID)
-		if "" == name {
+		name, resovErr := store.ResolveResourceNameByID(r.ResourceID, params.Language)
+		if resovErr != nil || "" == name {
+			c.Error(fmt.Errorf("resovError:%v", resovErr))
 			continue
 		}
 		rating := schema.RatingResource{
@@ -88,17 +100,29 @@ func (s *Server) getProfileRatings(c *gin.Context) {
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 		return
 	}
+	var params struct {
+		Language string `form:"lang"`
+	}
+
+	if err := c.BindQuery(&params); err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
+		return
+	}
+	if "" == params.Language {
+		params.Language = "en"
+	}
+
+	for i, r := range metric.Resources {
+		name, resovErr := store.ResolveResourceNameByID(r.ID, params.Language)
+		if resovErr != nil || "" == name {
+			c.Error(fmt.Errorf("resoveResourceNameByIDError:%v", resovErr))
+			continue
+		}
+		metric.Resources[i].Name = name
+	}
 
 	sort.SliceStable(metric.Resources, func(i, j int) bool {
 		return metric.Resources[i].Score > metric.Resources[j].Score // Inverse sort
 	})
 	c.JSON(http.StatusOK, gin.H{"ratings": metric.Resources})
-}
-
-func (s *Server) getResourceName(id string) string {
-	val, ok := schema.DefaultResources[id]
-	if !ok {
-		return ""
-	}
-	return val
 }

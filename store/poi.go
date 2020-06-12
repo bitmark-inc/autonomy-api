@@ -85,8 +85,8 @@ func LoadDefaultPOIResources(lang string) error {
 	return nil
 }
 
-// resolveResourceNameByID returns the name of a given resource id by languages
-func resolveResourceNameByID(id, lang string) (string, error) {
+// ResolveResourceNameByID returns the name of a given resource id by languages
+func ResolveResourceNameByID(id, lang string) (string, error) {
 	lang = strings.ReplaceAll(strings.ToLower(lang), "-", "_")
 
 	m, ok := defaultResourceIDMap[lang]
@@ -608,7 +608,7 @@ func (m *mongoDB) AddPOIResources(poiID primitive.ObjectID, resources []schema.R
 		resource := &resources[i]
 		if resource.ID != "" {
 			var err error
-			resource.Name, err = resolveResourceNameByID(resource.ID, lang)
+			resource.Name, err = ResolveResourceNameByID(resource.ID, lang)
 			if err != nil {
 				return nil, err
 			}
