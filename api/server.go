@@ -247,7 +247,7 @@ func (s *Server) setupRouter() *gin.Engine {
 	reportItemRoute := apiRoute.Group("/report-items")
 	reportItemRoute.Use(s.recognizeAccountMiddleware())
 	{
-		reportItemRoute.GET("/", s.getReportItems)
+		reportItemRoute.GET("", s.getReportItems)
 	}
 
 	debugRoute := apiRoute.Group("/debug")
