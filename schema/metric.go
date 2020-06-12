@@ -43,8 +43,8 @@ type Details struct {
 type IndividualMetric struct {
 	Score          float64 `json:"score" bson:"score"`
 	ScoreYesterday float64 `json:"score_yesterday" bson:"score_yesterday"`
-	SymptomCount   float64 `json:"symptoms" bson:"symptoms"`
-	SymptomDelta   float64 `json:"symptoms_delta" bson:"symptoms_delta"`
+	SymptomCount   float64 `json:"symptom" bson:"symptoms"`
+	SymptomDelta   float64 `json:"symptom_delta" bson:"symptoms_delta"`
 	BehaviorCount  float64 `json:"behavior" bson:"behavior"`
 	BehaviorDelta  float64 `json:"behavior_delta" bson:"behavior_delta"`
 }
@@ -52,8 +52,8 @@ type IndividualMetric struct {
 type Metric struct {
 	ConfirmedCount float64 `json:"confirm" bson:"confirm"`
 	ConfirmedDelta float64 `json:"confirm_delta" bson:"confirm_delta"`
-	SymptomCount   float64 `json:"symptoms" bson:"symptoms"`
-	SymptomDelta   float64 `json:"symptoms_delta" bson:"symptoms_delta"`
+	SymptomCount   float64 `json:"symptom" bson:"symptoms"`
+	SymptomDelta   float64 `json:"symptom_delta" bson:"symptoms_delta"`
 	BehaviorCount  float64 `json:"behavior" bson:"behavior"`
 	BehaviorDelta  float64 `json:"behavior_delta" bson:"behavior_delta"`
 	Score          float64 `json:"score" bson:"score"`
