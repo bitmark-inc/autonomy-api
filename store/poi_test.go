@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -27,6 +29,13 @@ var addedPOIID2 = primitive.NewObjectID()
 var existedPOIID = primitive.NewObjectID()
 var noCountryPOIID = primitive.NewObjectID()
 var metricPOIID = primitive.NewObjectID()
+var noResourcesPOIID = primitive.NewObjectID()
+var noResourcesPOIID2 = primitive.NewObjectID()
+var duplicatedResourcesPOIID = primitive.NewObjectID()
+var twoResourcesPOIID = primitive.NewObjectID()
+var officialResourcesPOIID = primitive.NewObjectID()
+
+var notFoundPOIID = primitive.NewObjectID()
 
 var testLocation = schema.Location{
 	Latitude:  40.7385105,
@@ -99,6 +108,43 @@ var (
 		},
 		PlaceType: "unknown",
 	}
+
+	noResourcesPOI = schema.POI{
+		ID: noResourcesPOIID,
+	}
+
+	noResourcesPOI2 = schema.POI{
+		ID: noResourcesPOIID2,
+	}
+
+	twoResourcesPOI = schema.POI{
+		ID: twoResourcesPOIID,
+		ResourceRatings: schema.POIRatingsMetric{
+			Resources: []schema.POIResourceRating{
+				{Resource: schema.Resource{ID: "7b8d3ed5e4150b189fbbf8c19786915df963c4be727d8f73db6c0b2c249563d3", Name: "test1"}},
+				{Resource: schema.Resource{ID: "382bf961d3ccb85ee38ba6af8329511c976ebdd66e052d8345d102d29d52bcd7", Name: "test2"}},
+			},
+		},
+	}
+
+	officialResourcesPOI = schema.POI{
+		ID: officialResourcesPOIID,
+		ResourceRatings: schema.POIRatingsMetric{
+			Resources: []schema.POIResourceRating{
+				{Resource: schema.Resource{ID: "resource_1", Name: "resource_1"}}, // important
+				{Resource: schema.Resource{ID: "resource_2", Name: "resource_2"}}, // normal
+			},
+		},
+	}
+
+	duplicatedResourcesPOI = schema.POI{
+		ID: duplicatedResourcesPOIID,
+		ResourceRatings: schema.POIRatingsMetric{
+			Resources: []schema.POIResourceRating{
+				{Resource: schema.Resource{ID: "12c99e1e3afec0ce9c21d27794d21bfff496116b8ed9ba354f731d35cb0be6b5", Name: "test3"}},
+			},
+		},
+	}
 )
 
 var originAlias = "origin POI"
@@ -142,12 +188,24 @@ func (s *POITestSuite) SetupSuite() {
 	s.mongoClient = mongoClient
 	s.testDatabase = mongoClient.Database(s.testDBName)
 
+	os.Setenv("TEST_I18N_DIR", "../i18n")
+	viper.AutomaticEnv()
+	viper.SetEnvPrefix("test")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	utils.InitI18NBundle()
+
 	// make sure the test suite is run with a clean environment
 	if err := s.CleanMongoDB(); err != nil {
 		s.T().Fatal(err)
 	}
 	schema.NewMongoDBIndexer(s.connURI, s.testDBName).IndexAll()
 	if err := s.LoadMongoDBFixtures(); err != nil {
+		s.T().Fatal(err)
+	}
+}
+
+func (s *POITestSuite) SetupTest() {
+	if err := LoadDefaultPOIResources("en"); err != nil {
 		s.T().Fatal(err)
 	}
 }
@@ -230,6 +288,11 @@ func (s *POITestSuite) LoadMongoDBFixtures() error {
 		addedPOI2,
 		existedPOI,
 		metricPOI,
+		noResourcesPOI,
+		noResourcesPOI2,
+		twoResourcesPOI,
+		duplicatedResourcesPOI,
+		officialResourcesPOI,
 	}); err != nil {
 		return err
 	}
@@ -559,6 +622,119 @@ func (s *POITestSuite) TestUpdatePOIAliasFromNonexistentAccount() {
 func (s *POITestSuite) TestUpdatePOIAliasForNotAddedPOI() {
 	store := NewMongoStore(s.mongoClient, s.testDBName)
 	s.EqualError(store.UpdatePOIAlias("account-test-update-poi-alias", "new-poi-alias", addedPOIID2), ErrPOINotFound.Error())
+}
+
+func (s *POITestSuite) TestAddPOIResources() {
+	var testResources = []schema.Resource{
+		{Name: "test-new1"}, {Name: "test-new2"},
+	}
+
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	resources, err := store.AddPOIResources(noResourcesPOIID, testResources, "en")
+	s.NoError(err)
+	s.Len(resources, 2)
+}
+
+func (s *POITestSuite) TestAddPOIResourcesWithIDButNoLanguageSupport() {
+	delete(defaultResourceIDMap, "en")
+	delete(defaultResourceList, "en")
+
+	var testResources = []schema.Resource{
+		{ID: "resource_1"}, {ID: "resource_2"},
+	}
+
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	resources, err := store.AddPOIResources(noResourcesPOIID, testResources, "en")
+	s.EqualError(err, "poi resources can not resolved")
+	s.Nil(resources)
+}
+
+func (s *POITestSuite) TestAddPOIResourcesNotFound() {
+	var testResources = []schema.Resource{
+		{Name: "test-new1"}, {Name: "test-new2"},
+	}
+
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	resources, err := store.AddPOIResources(notFoundPOIID, testResources, "en")
+	s.Error(err)
+	s.EqualError(err, "poi not found")
+	s.Len(resources, 0)
+}
+
+func (s *POITestSuite) TestAddPOIResourcesDuplicated() {
+	ctx := context.Background()
+
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	var duplicatedTestResources = []schema.Resource{
+		{ID: "12c99e1e3afec0ce9c21d27794d21bfff496116b8ed9ba354f731d35cb0be6b5", Name: "test3"},
+	}
+
+	var poiBefore schema.POI
+	err := s.testDatabase.Collection(schema.POICollection).
+		FindOne(ctx,
+			bson.M{"_id": duplicatedResourcesPOIID},
+			options.FindOne().SetProjection(bson.M{"resource_ratings": 1})).Decode(&poiBefore)
+	s.NoError(err)
+	s.Equal(1, len(poiBefore.ResourceRatings.Resources))
+
+	resources, err := store.AddPOIResources(duplicatedResourcesPOIID, duplicatedTestResources, "en")
+	s.NoError(err)
+	s.Len(resources, 1)
+
+	var poiAfter schema.POI
+	err = s.testDatabase.Collection(schema.POICollection).
+		FindOne(ctx,
+			bson.M{"_id": duplicatedResourcesPOIID},
+			options.FindOne().SetProjection(bson.M{"resource_ratings": 1})).Decode(&poiAfter)
+	s.NoError(err)
+	s.Equal(1, len(poiAfter.ResourceRatings.Resources))
+}
+
+func (s *POITestSuite) TestGetPOIResourcesWithNoResourceAdded() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	resources, err := store.GetPOIResources(noResourcesPOIID2, false, "en")
+	s.NoError(err)
+	s.Len(resources, 126)
+
+	resources, err = store.GetPOIResources(noResourcesPOIID2, true, "en")
+	s.NoError(err)
+	s.Len(resources, 30)
+}
+
+func (s *POITestSuite) TestGetPOIResourcesWithUnsupportLanguage() { // fallback to en
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	resources, err := store.GetPOIResources(noResourcesPOIID2, false, "fr")
+	s.NoError(err)
+	s.Len(resources, 126)
+
+	resources, err = store.GetPOIResources(noResourcesPOIID2, true, "fr")
+	s.NoError(err)
+	s.Len(resources, 30)
+}
+
+func (s *POITestSuite) TestGetPOIResourcesWithNoDefaultLanguage() {
+	delete(defaultResourceIDMap, "en")
+	delete(defaultResourceList, "en")
+
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	resources, err := store.GetPOIResources(noResourcesPOIID2, false, "fr")
+	s.EqualError(err, "poi resources not found")
+	s.Nil(resources)
+
+	resources, err = store.GetPOIResources(noResourcesPOIID2, true, "fr")
+	s.EqualError(err, "poi resources not found")
+	s.Nil(resources)
+}
+
+func (s *POITestSuite) TestGetPOIResourcesWithTwoResourceAdded() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	resources, err := store.GetPOIResources(officialResourcesPOIID, false, "en")
+	s.NoError(err)
+	s.Len(resources, 124) // two resources added, 126 - 2
+
+	resources, err = store.GetPOIResources(officialResourcesPOIID, true, "en")
+	s.NoError(err)
+	s.Len(resources, 29) // only one important, 30 - 1
 }
 
 func (s *POITestSuite) TestGetPOIMetric() {
