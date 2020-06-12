@@ -172,11 +172,9 @@ func (s *Server) placeProfile(c *gin.Context) {
 	resources := []schema.POIResourceRating{}
 	resources = poi.ResourceRatings.Resources
 	if !params.AllReosurces { // return 10 records and indicate more or not
-		if len(poi.ResourceRatings.Resources) >= 10 {
+		if len(poi.ResourceRatings.Resources) > 10 {
 			resources = poi.ResourceRatings.Resources[:10]
-			if len(poi.ResourceRatings.Resources) > 10 {
-				resp.HasMoreResource = true
-			}
+			resp.HasMoreResource = true
 		}
 	}
 	sort.SliceStable(resources, func(i, j int) bool {

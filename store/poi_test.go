@@ -717,11 +717,11 @@ func (s *POITestSuite) TestGetPOIResourcesWithNoDefaultLanguage() {
 	delete(defaultResourceList, "en")
 
 	store := NewMongoStore(s.mongoClient, s.testDBName)
-	resources, err := store.GetPOIResources(noResourcesPOIID2, false, "fr")
+	resources, err := store.GetPOIResources(noResourcesPOIID2, false, "en")
 	s.EqualError(err, "poi resources not found")
 	s.Nil(resources)
 
-	resources, err = store.GetPOIResources(noResourcesPOIID2, true, "fr")
+	resources, err = store.GetPOIResources(noResourcesPOIID2, true, "en")
 	s.EqualError(err, "poi resources not found")
 	s.Nil(resources)
 }
