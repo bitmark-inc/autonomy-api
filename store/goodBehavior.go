@@ -30,7 +30,7 @@ type GoodBehaviorReport interface {
 	CreateBehavior(behavior schema.Behavior) (string, error)
 	GoodBehaviorSave(data *schema.BehaviorReportData) error
 	FindBehaviorsByIDs(ids []string) ([]schema.Behavior, error)
-	FindNearbyBehaviorDistribution(dist int, loc schema.Location, start, end int64) (map[string]int, error)
+	FindBehaviorDistribution(profileID string, loc *schema.Location, dist int, start, end int64) (map[string]int, error)
 	FindNearbyBehaviorReportTimes(dist int, loc schema.Location, start, end int64) (int, error)
 	FindNearbyNonOfficialBehaviors(dist int, loc schema.Location) ([]schema.Behavior, error)
 	ListOfficialBehavior(string) ([]schema.Behavior, error)
@@ -179,8 +179,8 @@ func (m *mongoDB) FindBehaviorsByIDs(ids []string) ([]schema.Behavior, error) {
 	return behaviors, nil
 }
 
-// FindNearbyBehaviorDistribution returns the mapping of each reported behavior and the number of report times
-// in the specified area and within the specified time rage.
+// FindBehaviorDistribution returns the mapping of each reported behavior and the number of report times
+// within the specified time rage (1) from a specified user or (2) in the specified area.
 //
 // Here's the example: within the specified time interval, assume there are following 5 reports:
 //
@@ -193,13 +193,27 @@ func (m *mongoDB) FindBehaviorsByIDs(ids []string) ([]schema.Behavior, error) {
 // | userB | [clean_hand] 		                         |
 //
 // behavior_distribution = {social_distancing: 2, clean_hand: 5, touch_face: 1}
-func (m *mongoDB) FindNearbyBehaviorDistribution(dist int, loc schema.Location, start, end int64) (map[string]int, error) {
+func (m *mongoDB) FindBehaviorDistribution(profileID string, loc *schema.Location, dist int, start, end int64) (map[string]int, error) {
 	c := m.client.Database(m.database).Collection(schema.BehaviorReportCollection)
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 
+	var filter bson.M
+	switch {
+	case profileID != "":
+		filter = bson.M{
+			"$match": bson.M{
+				"profile_id": profileID,
+			},
+		}
+	case loc != nil:
+		filter = aggStageGeoProximity(dist, *loc)
+	default:
+		return nil, errors.New("either profile ID or location not provided")
+	}
+
 	pipeline := []bson.M{
-		aggStageGeoProximity(dist, loc),
+		filter,
 		aggStageReportedBetween(start, end),
 		{
 			"$project": bson.M{
@@ -251,7 +265,7 @@ func (m *mongoDB) FindNearbyBehaviorDistribution(dist int, loc schema.Location, 
 
 // FindNearbyBehaviorReportTimes returns the number of report times in the specified area and within the specified time rage.
 //
-// Take the same case described in the above function FindNearbyBehaviorDistribution for example,
+// Take the same case described in the above function FindBehaviorDistribution for example,
 // the result is 5.
 func (m *mongoDB) FindNearbyBehaviorReportTimes(dist int, loc schema.Location, start, end int64) (int, error) {
 	c := m.client.Database(m.database).Collection(schema.BehaviorReportCollection)
@@ -286,7 +300,7 @@ func (m *mongoDB) FindNearbyBehaviorReportTimes(dist int, loc schema.Location, s
 
 // FindNearbyNonOfficialBehaviors returns non-official behaviors in the specified area.
 func (m *mongoDB) FindNearbyNonOfficialBehaviors(dist int, loc schema.Location) ([]schema.Behavior, error) {
-	distribution, err := m.FindNearbyBehaviorDistribution(dist, loc, 0, 9223372036854775807)
+	distribution, err := m.FindBehaviorDistribution("", &loc, dist, 0, 9223372036854775807)
 	if err != nil {
 		return nil, err
 	}

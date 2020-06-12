@@ -34,11 +34,11 @@ func (m *mongoDB) CollectRawMetrics(location schema.Location) (*schema.Metric, e
 	todayStartAtUnix := todayStartAt.Unix()
 	tomorrowStartAtUnix := todayStartAt.AddDate(0, 0, 1).Unix()
 
-	behaviorDistrToday, err := m.FindNearbyBehaviorDistribution(consts.NEARBY_DISTANCE_RANGE, location, todayStartAtUnix, tomorrowStartAtUnix)
+	behaviorDistrToday, err := m.FindBehaviorDistribution("", &location, consts.NEARBY_DISTANCE_RANGE, todayStartAtUnix, tomorrowStartAtUnix)
 	if err != nil {
 		return nil, err
 	}
-	behaviorDistrYesterday, err := m.FindNearbyBehaviorDistribution(consts.NEARBY_DISTANCE_RANGE, location, yesterdayStartAtUnix, todayStartAtUnix)
+	behaviorDistrYesterday, err := m.FindBehaviorDistribution("", &location, consts.NEARBY_DISTANCE_RANGE, yesterdayStartAtUnix, todayStartAtUnix)
 	if err != nil {
 		return nil, err
 	}
@@ -51,11 +51,11 @@ func (m *mongoDB) CollectRawMetrics(location schema.Location) (*schema.Metric, e
 		return nil, err
 	}
 
-	symptomDistToday, err := m.FindNearbySymptomDistribution(consts.NEARBY_DISTANCE_RANGE, location, todayStartAtUnix, tomorrowStartAtUnix)
+	symptomDistToday, err := m.FindSymptomDistribution("", &location, consts.NEARBY_DISTANCE_RANGE, todayStartAtUnix, tomorrowStartAtUnix, true)
 	if err != nil {
 		return nil, err
 	}
-	symptomDistYesterday, err := m.FindNearbySymptomDistribution(consts.NEARBY_DISTANCE_RANGE, location, yesterdayStartAtUnix, todayStartAtUnix)
+	symptomDistYesterday, err := m.FindSymptomDistribution("", &location, consts.NEARBY_DISTANCE_RANGE, yesterdayStartAtUnix, todayStartAtUnix, true)
 	if err != nil {
 		return nil, err
 	}
