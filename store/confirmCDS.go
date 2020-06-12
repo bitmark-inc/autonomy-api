@@ -131,6 +131,11 @@ func (m mongoDB) GetCDSActive(loc schema.Location, referenceTime int64) (float64
 	}
 
 	filter := bson.M{"report_ts": bson.M{"$lte": referenceTime}}
+	if loc.Country == schema.CdsUSA {
+		filter["county"] = loc.County
+		filter["state"] = loc.State
+	}
+
 	opts := options.Find().SetSort(bson.M{"report_ts": -1}).SetLimit(2)
 	cur, err := m.client.Database(m.database).Collection(collectionName).Find(context.Background(), filter, opts)
 	if nil != err {
