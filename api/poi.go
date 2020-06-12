@@ -170,3 +170,84 @@ func (s *Server) deletePOI(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"result": "OK"})
 }
+
+// addPOIResources add resources into a POI
+func (s *Server) addPOIResources(c *gin.Context) {
+	poiID, err := primitive.ObjectIDFromHex(c.Param("poiID"))
+	if err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, fmt.Errorf("invalid POI ID"))
+		return
+	}
+
+	var query struct {
+		Language string `form:"lang"`
+	}
+
+	if err := c.BindQuery(&query); err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
+		return
+	}
+
+	var params struct {
+		ResourceIDs      []string `json:"resource_ids"`
+		NewResourceNames []string `json:"new_resource_names"`
+	}
+	if err := c.BindJSON(&params); err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
+		return
+	}
+
+	addedResources := make([]schema.Resource, 0, len(params.ResourceIDs)+len(params.NewResourceNames))
+	for _, id := range params.ResourceIDs {
+		addedResources = append(addedResources, schema.Resource{ID: id})
+	}
+	for _, name := range params.NewResourceNames {
+		addedResources = append(addedResources, schema.Resource{Name: name})
+	}
+
+	resources, err := s.mongoStore.AddPOIResources(poiID, addedResources, query.Language)
+	if err != nil {
+		switch err {
+		case store.ErrPOINotFound:
+			abortWithEncoding(c, http.StatusBadRequest, errorUnknownPOI)
+		default:
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"resources": resources,
+	})
+	return
+}
+
+// getPOIResources add resources from a POI
+func (s *Server) getPOIResources(c *gin.Context) {
+	poiID, err := primitive.ObjectIDFromHex(c.Param("poiID"))
+	if err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, fmt.Errorf("invalid POI ID"))
+		return
+	}
+
+	var params struct {
+		Language      string `form:"lang"`
+		ImportantOnly bool   `form:"important"`
+	}
+
+	if err := c.Bind(&params); err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
+		return
+	}
+
+	resources, err := s.mongoStore.GetPOIResources(poiID, params.ImportantOnly, params.Language)
+	if err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"resources": resources,
+	})
+	return
+}
