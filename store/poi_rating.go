@@ -31,16 +31,10 @@ func (m *mongoDB) GetPOIResourceMetric(poiID primitive.ObjectID) (schema.POIRati
 		}).Error("get poi fail")
 		return schema.POIRatingsMetric{}, err
 	}
-	log.WithFields(log.Fields{
-		"prefix": mongoLogPrefix,
-		"poi ID": poiID.String(),
-		"result": result,
-	}).Info("get poi")
-
 	return result.ResourceRatings, nil
 }
 
-func (m *mongoDB) UpdatePOIRatingMetric(poiID primitive.ObjectID, ratings []schema.RatingResource) error {
+func (m *mongoDB) UpdatePOIRatingMetric(accountNumber string, poiID primitive.ObjectID, ratings []schema.RatingResource) error {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 	c := m.client.Database(m.database).Collection(schema.POICollection)
@@ -55,6 +49,19 @@ func (m *mongoDB) UpdatePOIRatingMetric(poiID primitive.ObjectID, ratings []sche
 		}).Error("get poi fail")
 		return err
 	}
+
+	profileMetric, err := m.GetProfilesRatingMetricByPOI(accountNumber, poiID)
+
+	if err != nil {
+		log.WithFields(log.Fields{
+			"prefix":        mongoLogPrefix,
+			"poi ID":        poiID.String(),
+			"acount number": accountNumber,
+			"error":         err,
+		}).Error("get poi fail")
+		return err
+	}
+
 	now := time.Now().UTC()
 	todayStartAt := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 
@@ -72,23 +79,31 @@ func (m *mongoDB) UpdatePOIRatingMetric(poiID primitive.ObjectID, ratings []sche
 	}
 
 	for _, r := range ratings { //add user rating (could be an empty one) to score
-		val, ok := resourceMap[r.Resource.ID]
-
-		if !ok {
-			val = schema.POIResourceRating{}
+		existPoiRating, ok := resourceMap[r.Resource.ID]
+		existProfileRating := schema.RatingResource{}
+		update := false
+		if !ok { // new
+			existPoiRating = schema.POIResourceRating{}
+			log.Info("New POI rating")
+		} else { // old , should be update
+			for _, pr := range profileMetric.Resources {
+				if pr.ID == r.ID {
+					existProfileRating = pr
+					update = true
+				}
+			}
 		}
-
-		count, sum, average := score.ResourceScore(val.Ratings, val.SumOfScore, r)
+		//	count, sum, average := score.ResourceScore(val.Ratings, val.SumOfScore, r,)
+		count, sum, average := score.ResourceScore(existPoiRating, r, existProfileRating, update)
 		resourceMap[r.Resource.ID] = schema.POIResourceRating{
 			Resource:       r.Resource,
 			SumOfScore:     sum,
 			Score:          average,
 			Ratings:        count,
-			LastUpdate:     val.LastUpdate,
-			LastDayScore:   val.LastDayScore,
-			LastDayRatings: val.LastDayRatings,
+			LastUpdate:     existPoiRating.LastUpdate,
+			LastDayScore:   existPoiRating.LastDayScore,
+			LastDayRatings: existPoiRating.LastDayRatings,
 		}
-		log.Info(resourceMap[r.Resource.ID])
 	}
 
 	poiRatings := []schema.POIResourceRating{}

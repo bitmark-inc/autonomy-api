@@ -66,20 +66,19 @@ func (s *Server) updatePOIRating(c *gin.Context) {
 		profileMetric.Resources = append(profileMetric.Resources, rating)
 	}
 
-	profileMetric.LastUpdate = time.Now().Unix()
-	err = s.mongoStore.UpdateProfilePOIRatingMetric(account.AccountNumber, poiID, profileMetric)
-	if err != nil {
-		abortWithEncoding(c, http.StatusBadRequest, errorProfileNotUpdate, fmt.Errorf("UpdateProfilePOIRatingMetric update rating metric error"))
-		return
-	}
-
-	if err := s.mongoStore.UpdatePOIRatingMetric(poiID, profileMetric.Resources); err != nil {
+	if err := s.mongoStore.UpdatePOIRatingMetric(account.AccountNumber, poiID, profileMetric.Resources); err != nil {
 		switch err {
 		case store.ErrPOINotFound:
 			abortWithEncoding(c, http.StatusBadRequest, errorUnknownPOI)
 		default:
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 		}
+		return
+	}
+	profileMetric.LastUpdate = time.Now().Unix()
+	err = s.mongoStore.UpdateProfilePOIRatingMetric(account.AccountNumber, poiID, profileMetric)
+	if err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorProfileNotUpdate, fmt.Errorf("UpdateProfilePOIRatingMetric update rating metric error"))
 		return
 	}
 
