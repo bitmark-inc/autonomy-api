@@ -29,7 +29,7 @@ type Symptom interface {
 	ListCustomizedSymptoms() ([]schema.Symptom, error)
 	SymptomReportSave(data *schema.SymptomReportData) error
 	FindSymptomsByIDs(ids []string) ([]schema.Symptom, error)
-	FindSymptomDistribution(profileID string, loc *schema.Location, dist int, start, end int64, unique bool) (map[string]int, error)
+	FindSymptomDistribution(profileID string, loc *schema.Location, dist int, start, end int64, distinct bool) (map[string]int, error)
 	FindNearbyNonOfficialSymptoms(dist int, loc schema.Location) ([]schema.Symptom, error)
 	GetSymptomCount(profileID string, loc *schema.Location, dist int, now time.Time) (int, int, error)
 }
@@ -217,7 +217,7 @@ func (m *mongoDB) FindSymptomsByIDs(ids []string) ([]schema.Symptom, error) {
 // FindSymptomDistribution returns the mapping of each reported symptom and its aggregated value
 // within the specified time rage (1) from a specified user or (2) in the specified area.
 //
-// If `unique` is true, each aggregated value means how many people have reported this symptom.
+// If `distinct` is true, each aggregated value means how many people have reported this symptom.
 // Otherwise, it means how many times a symptom is reported.
 //
 // Here's the example: within the specified time interval, assume there are following 5 reports:
@@ -230,9 +230,9 @@ func (m *mongoDB) FindSymptomsByIDs(ids []string) ([]schema.Symptom, error) {
 // | userB | [fever]               |
 // | userB | [fever] 			    |
 //
-// unique = T, symptom_distribution = {fever: 2, cough: 1, nasal: 1}
-// unique = F, symptom_distribution = {fever: 5, cough: 2, nasal: 1}
-func (m *mongoDB) FindSymptomDistribution(profileID string, loc *schema.Location, dist int, start, end int64, unique bool) (map[string]int, error) {
+// distinct = T, symptom_distribution = {fever: 2, cough: 1, nasal: 1}
+// distinct = F, symptom_distribution = {fever: 5, cough: 2, nasal: 1}
+func (m *mongoDB) FindSymptomDistribution(profileID string, loc *schema.Location, dist int, start, end int64, distinct bool) (map[string]int, error) {
 	c := m.client.Database(m.database).Collection(schema.SymptomReportCollection)
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
@@ -274,7 +274,7 @@ func (m *mongoDB) FindSymptomDistribution(profileID string, loc *schema.Location
 			},
 		},
 	}
-	if unique {
+	if distinct {
 		stages := []bson.M{
 			{
 				"$group": bson.M{
