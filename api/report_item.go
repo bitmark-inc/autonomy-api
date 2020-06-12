@@ -61,9 +61,11 @@ func (s *Server) getReportItems(c *gin.Context) {
 
 	var profileID string
 	var loc schema.Location
+	var scoreOwner string
 	switch params.Scope {
 	case reportItemScopeIndividual:
 		profileID = account.ProfileID.String()
+		scoreOwner = account.AccountNumber
 	case reportItemScopeNeighborhood:
 		if lastLocation := account.Profile.State.LastLocation; lastLocation == nil {
 			abortWithEncoding(c, http.StatusBadRequest, errorUnknownAccountLocation)
@@ -100,6 +102,7 @@ func (s *Server) getReportItems(c *gin.Context) {
 				County:  poi.County,
 			},
 		}
+		scoreOwner = params.PoiID
 	default:
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters)
 		return
@@ -107,7 +110,24 @@ func (s *Server) getReportItems(c *gin.Context) {
 
 	switch params.Type {
 	case reportItemTypeScore:
-		// TODO: handle score
+		currAvgScore, err := s.mongoStore.GetScoreAverage(scoreOwner, currentPeriodStart, currentPeriodEnd)
+		if err != nil {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+			return
+		}
+		prevAvgScore, err := s.mongoStore.GetScoreAverage(scoreOwner, previousPeriodStart, previousPeriodEnd)
+		if err != nil {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+			return
+		}
+		results := gatherReportItems(
+			map[string]int{"autonomy_score": int(currAvgScore)},
+			map[string]int{"autonomy_score": int(prevAvgScore)})
+		items := getReportItemsForDisplay(results, func(scoreID string) string {
+			// TODO: translate
+			return scoreID
+		})
+		c.JSON(http.StatusOK, gin.H{"report_items": items})
 	case reportItemTypeSymptom:
 		currentDistribution, err := s.mongoStore.FindSymptomDistribution(profileID, &loc, consts.NEARBY_DISTANCE_RANGE, currentPeriodStart, currentPeriodEnd, false)
 		if err != nil {

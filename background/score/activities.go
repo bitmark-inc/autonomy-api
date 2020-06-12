@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/spf13/viper"
 	"github.com/vmihailenco/msgpack/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -65,8 +66,10 @@ func (s *ScoreUpdateWorker) CalculatePOIStateActivity(ctx context.Context, id st
 	if err != nil {
 		return nil, err
 	}
-
 	metric := score.CalculateMetric(*rawMetrics, nil)
+	if err := s.mongo.AddScoreRecord(id, schema.ScoreRecordTypePOI, metric.Score, time.Now().UTC().Unix()); err != nil {
+		sentry.CaptureException(err)
+	}
 
 	return &metric, nil
 }
@@ -282,5 +285,11 @@ func (s *ScoreUpdateWorker) CalculateAccountStateActivity(ctx context.Context, a
 	}
 
 	metric := score.CalculateMetric(*rawMetrics, profile.ScoreCoefficient)
+
+	score, _ := score.CalculateIndividualAutonomyScore(profile.IndividualMetric, metric)
+	if err := s.mongo.AddScoreRecord(accountNumber, schema.ScoreRecordTypeIndividual, score, time.Now().UTC().Unix()); err != nil {
+		sentry.CaptureException(err)
+	}
+
 	return &metric, nil
 }

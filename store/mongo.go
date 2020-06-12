@@ -29,6 +29,7 @@ type MongoStore interface {
 	ConfirmCDS
 	Report
 	Guide
+	ScoreHistory
 }
 
 // Closer - close db connection
