@@ -12,8 +12,8 @@ import (
 	"github.com/bitmark-inc/autonomy-api/score"
 )
 
-// resource.go is an extension of  poi.go
-// method of interface is defined in poi.go
+// poi_rating.go is an extension of  poi.go
+// methods of interface are defined in poi.go
 func (m *mongoDB) GetPOIResourceMetric(poiID primitive.ObjectID) (schema.POIRatingsMetric, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()

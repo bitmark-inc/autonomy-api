@@ -29,7 +29,6 @@ var (
 
 		1300: store.ErrPOIListNotFound.Error(),
 		1301: store.ErrPOIListMismatch.Error(),
-		1302: store.ErrPOINotFound.Error(),
 		1303: store.ErrProfileNotUpdate.Error(),
 	}
 
@@ -57,8 +56,7 @@ var (
 
 	errorPOIListNotFound  = errorJSON(1300)
 	errorPOIListMissmatch = errorJSON(1301)
-	errorPOINotFound      = errorJSON(1302)
-	errorProfileNotUpdate = errorJSON(1303)
+	errorProfileNotUpdate = errorJSON(1302)
 )
 
 type ErrorResponse struct {

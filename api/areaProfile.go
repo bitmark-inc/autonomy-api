@@ -159,7 +159,7 @@ func (s *Server) placeProfile(c *gin.Context) {
 	var resp struct {
 		ID              string                     `json:"id"`
 		Alias           string                     `json:"alias"`
-		Address         string                     ` json:"address"`
+		Address         string                     `json:"address"`
 		Location        *schema.GeoJSON            `json:"location"`
 		Rating          bool                       `json:"rating"`
 		HasMoreResource bool                       `json:"has_more_resources"`
@@ -171,11 +171,11 @@ func (s *Server) placeProfile(c *gin.Context) {
 
 	resources := []schema.POIResourceRating{}
 	resources = poi.ResourceRatings.Resources
-	if !params.AllReosurces { // return all resources
+	if !params.AllReosurces { // return 10 records and indicate more or not
 		if len(poi.ResourceRatings.Resources) >= 10 {
 			resources = poi.ResourceRatings.Resources[:10]
 			if len(poi.ResourceRatings.Resources) > 10 {
-				resp.HasMoreResource = false
+				resp.HasMoreResource = true
 			}
 		}
 	}
