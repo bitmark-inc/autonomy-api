@@ -38,9 +38,7 @@ func (m *mongoDB) UpdatePOIRatingMetric(accountNumber string, poiID primitive.Ob
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 	c := m.client.Database(m.database).Collection(schema.POICollection)
-
-	metric, err := m.GetPOIResourceMetric(poiID)
-
+	poiMetric, err := m.GetPOIResourceMetric(poiID)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"prefix": mongoLogPrefix,
@@ -51,7 +49,6 @@ func (m *mongoDB) UpdatePOIRatingMetric(accountNumber string, poiID primitive.Ob
 	}
 
 	profileMetric, err := m.GetProfilesRatingMetricByPOI(accountNumber, poiID)
-
 	if err != nil {
 		log.WithFields(log.Fields{
 			"prefix":        mongoLogPrefix,
@@ -64,10 +61,9 @@ func (m *mongoDB) UpdatePOIRatingMetric(accountNumber string, poiID primitive.Ob
 
 	now := time.Now().UTC()
 	todayStartAt := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-
-	resourceMap := make(map[string]schema.POIResourceRating)
-	for _, r := range metric.Resources { // make a current resources map
-		old, ok := resourceMap[r.Resource.ID]
+	poiResourceMap := make(map[string]schema.POIResourceRating)
+	for _, r := range poiMetric.Resources { // make a current poi resources map
+		old, ok := poiResourceMap[r.Resource.ID]
 		if ok {
 			if old.LastUpdate < todayStartAt.Unix() {
 				r.LastDayScore = old.Score
@@ -75,39 +71,43 @@ func (m *mongoDB) UpdatePOIRatingMetric(accountNumber string, poiID primitive.Ob
 			}
 		}
 		r.LastUpdate = now.Unix()
-		resourceMap[r.Resource.ID] = r
+		poiResourceMap[r.Resource.ID] = r
 	}
+	profileResourceMap := make(map[string]schema.RatingResource)
 
+	for _, r := range profileMetric.Resources { // make a current profile resource map
+		profileResourceMap[r.ID] = r
+	}
 	for _, r := range ratings { //add user rating (could be an empty one) to score
-		existPoiRating, ok := resourceMap[r.Resource.ID]
-		existProfileRating := schema.RatingResource{}
-		update := false
-		if !ok { // new
-			existPoiRating = schema.POIResourceRating{}
-			log.Info("New POI rating")
-		} else { // old , should be update
-			for _, pr := range profileMetric.Resources {
-				if pr.ID == r.ID {
-					existProfileRating = pr
-					update = true
-				}
-			}
+		existPOIRating, ok := poiResourceMap[r.ID] // check on poi metric,
+		if !ok {                                   // all resources in profile should be in the poi
+			return ErrPOINotFound
 		}
+		existProfileRating, ok := profileResourceMap[r.ID]
+		update := false
+		if ok { // update the score
+			update = true
+		} else {
+			existProfileRating = schema.RatingResource{}
+		}
+		count, sum, average := score.ResourceScore(existPOIRating, r, existProfileRating, update)
+
 		//	count, sum, average := score.ResourceScore(val.Ratings, val.SumOfScore, r,)
-		count, sum, average := score.ResourceScore(existPoiRating, r, existProfileRating, update)
-		resourceMap[r.Resource.ID] = schema.POIResourceRating{
+
+		poiResourceMap[r.Resource.ID] = schema.POIResourceRating{
 			Resource:       r.Resource,
 			SumOfScore:     sum,
 			Score:          average,
 			Ratings:        count,
-			LastUpdate:     existPoiRating.LastUpdate,
-			LastDayScore:   existPoiRating.LastDayScore,
-			LastDayRatings: existPoiRating.LastDayRatings,
+			LastUpdate:     existPOIRating.LastUpdate,
+			LastDayScore:   existPOIRating.LastDayScore,
+			LastDayRatings: existPOIRating.LastDayRatings,
 		}
 	}
 
 	poiRatings := []schema.POIResourceRating{}
-	for _, r := range resourceMap {
+
+	for _, r := range poiResourceMap {
 		poiRatings = append(poiRatings, r)
 	}
 
@@ -116,7 +116,7 @@ func (m *mongoDB) UpdatePOIRatingMetric(accountNumber string, poiID primitive.Ob
 	}
 	update := bson.M{
 		"$set": bson.M{
-			"rating_metric": schema.POIRatingsMetric{
+			"resource_ratings": schema.POIRatingsMetric{
 				Resources:  poiRatings,
 				LastUpdate: now.Unix(),
 			},
@@ -130,7 +130,7 @@ func (m *mongoDB) UpdatePOIRatingMetric(accountNumber string, poiID primitive.Ob
 			"prefix": mongoLogPrefix,
 			"poi ID": pid,
 			"error":  err,
-		}).Error("update poi rating_ metric")
+		}).Error("update poi resource_ratings")
 		return err
 	}
 
@@ -139,9 +139,14 @@ func (m *mongoDB) UpdatePOIRatingMetric(accountNumber string, poiID primitive.Ob
 			"prefix": mongoLogPrefix,
 			"poi ID": pid,
 			"error":  ErrPOINotFound.Error(),
-		}).Error("update poi rating_metric")
+		}).Error("update poi resource_ratings")
 		return ErrPOINotFound
 	}
-
+	profileMetric.LastUpdate = time.Now().Unix()
+	profileMetric.Resources = ratings
+	err = m.UpdateProfilePOIRatingMetric(accountNumber, poiID, profileMetric)
+	if err != nil {
+		return err
+	}
 	return nil
 }

@@ -597,7 +597,8 @@ func (m *mongoDB) AddPOIResources(poiID primitive.ObjectID, resources []schema.R
 	defer cancel()
 	db := m.client.Database(m.database)
 
-	if err := db.Collection(schema.POICollection).FindOne(ctx, bson.M{"_id": poiID}).Decode(&schema.POI{}); err != nil {
+	poi := schema.POI{}
+	if err := db.Collection(schema.POICollection).FindOne(ctx, bson.M{"_id": poiID}).Decode(&poi); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, ErrPOINotFound
 		}
