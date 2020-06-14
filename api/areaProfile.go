@@ -142,11 +142,15 @@ func (s *Server) placeProfile(c *gin.Context) {
 	}
 
 	var profilePoi schema.ProfilePOI
+	poiFound := false
 	for _, p := range profile.PointsOfInterest {
 		if p.ID == poiID {
 			profilePoi = p
-			break
+			poiFound = true
 		}
+	}
+	if !poiFound {
+		abortWithEncoding(c, http.StatusBadRequest, errorNoPOIInProfile, err)
 	}
 
 	// Get POI Resources

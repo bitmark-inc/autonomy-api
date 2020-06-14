@@ -610,7 +610,7 @@ func (m *mongoDB) GetProfilePOIRatingMetric(accountNumber string, id string) (sc
 		}
 	}
 
-	return schema.ProfileRatingsMetric{}, err
+	return schema.ProfileRatingsMetric{}, ErrPOINotFound
 }
 func (m *mongoDB) GetProfilesRatingMetricByPOI(account string, poiID primitive.ObjectID) (schema.ProfileRatingsMetric, error) {
 	log.WithField("prefix", mongoLogPrefix).Debugf("get accounts by POI id: %s", poiID.Hex())

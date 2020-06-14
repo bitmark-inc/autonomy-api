@@ -23,6 +23,7 @@ var (
 		1104: "unknown account location",
 		1105: "update score error",
 		1106: "unknown POI",
+		1107: "no POI in the profile",
 
 		1200: store.ErrRequestNotExist.Error(),
 		1201: store.ErrMultipleRequestMade.Error(),
@@ -50,6 +51,7 @@ var (
 	errorUnknownAccountLocation = errorJSON(1104)
 	errorUpdateScore            = errorJSON(1105)
 	errorUnknownPOI             = errorJSON(1106)
+	errorNoPOIInProfile         = errorJSON(1107)
 
 	errorRequestNotExist     = errorJSON(1200)
 	errorMultipleRequestMade = errorJSON(1201)
