@@ -121,8 +121,8 @@ func (s *Server) getReportItems(c *gin.Context) {
 			return
 		}
 		results := gatherReportItems(
-			map[string]int{"autonomy_score": int(currAvgScore)},
-			map[string]int{"autonomy_score": int(prevAvgScore)})
+			map[string]int{"autonomy score": int(currAvgScore)},
+			map[string]int{"autonomy score": int(prevAvgScore)})
 		items := getReportItemsForDisplay(results, func(scoreID string) string {
 			// TODO: translate
 			return scoreID
