@@ -39,7 +39,7 @@ func (s *Server) updatePOIRating(c *gin.Context) {
 	}
 
 	type userRating struct {
-		ResourceID string `json:"id"`
+		ResourceID string `json:"resource_id"`
 		Score      int    `json:"score"`
 	}
 
