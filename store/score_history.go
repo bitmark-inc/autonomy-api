@@ -21,7 +21,7 @@ func (m *mongoDB) AddScoreRecord(owner string, recordType schema.ScoreRecordType
 	defer cancel()
 
 	date := time.Unix(ts, 0).Format("2006-01-02")
-	query := bson.M{"type": recordType, "date": date}
+	query := bson.M{"owner": owner, "type": recordType, "date": date}
 	update := bson.M{
 		"$set": bson.M{
 			"score": score,

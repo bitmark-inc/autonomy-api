@@ -63,7 +63,7 @@ func (s *ScoreHistoryTestSuite) TestAddScoreRecord() {
 
 	var record schema.ScoreRecord
 
-	// first update
+	// user A: first update
 	firstUpdateTime := time.Date(2020, 5, 25, 12, 12, 0, 0, time.UTC)
 	err := store.AddScoreRecord("userA", schema.ScoreRecordTypeIndividual, 60.0, firstUpdateTime.Unix())
 	s.NoError(err)
@@ -83,7 +83,7 @@ func (s *ScoreHistoryTestSuite) TestAddScoreRecord() {
 		Date:  "2020-05-25",
 	}, record)
 
-	// second update in the same day
+	// user A: second update in the same day
 	secondUpdateTime := time.Date(2020, 5, 25, 12, 12, 0, 0, time.UTC)
 	err = store.AddScoreRecord("userA", schema.ScoreRecordTypeIndividual, 75.0, secondUpdateTime.Unix())
 	s.NoError(err)
@@ -94,6 +94,32 @@ func (s *ScoreHistoryTestSuite) TestAddScoreRecord() {
 		Owner: "userA",
 		Type:  schema.ScoreRecordTypeIndividual,
 		Score: 75.0,
+		Date:  "2020-05-25",
+	}, record)
+
+	// user B: first update in the same day
+	secondUpdateTime = time.Date(2020, 5, 25, 12, 12, 0, 0, time.UTC)
+	err = store.AddScoreRecord("userB", schema.ScoreRecordTypeIndividual, 40.0, secondUpdateTime.Unix())
+	s.NoError(err)
+	err = s.testDatabase.Collection(schema.ScoreHistoryCollection).FindOne(
+		context.Background(), query, options.FindOne()).Decode(&record)
+	s.NoError(err)
+	s.Equal(schema.ScoreRecord{
+		Owner: "userA",
+		Type:  schema.ScoreRecordTypeIndividual,
+		Score: 75.0,
+		Date:  "2020-05-25",
+	}, record)
+	err = s.testDatabase.Collection(schema.ScoreHistoryCollection).FindOne(
+		context.Background(), bson.M{
+			"owner": "userB",
+			"date":  "2020-05-25",
+		}, options.FindOne()).Decode(&record)
+	s.NoError(err)
+	s.Equal(schema.ScoreRecord{
+		Owner: "userB",
+		Type:  schema.ScoreRecordTypeIndividual,
+		Score: 40.0,
 		Date:  "2020-05-25",
 	}, record)
 }
