@@ -4,6 +4,7 @@ config.yaml
 Makefile
 mocks
 share/geojson/*.json
+share/geojson/*.geojson
 
 # Binaries
 bin
