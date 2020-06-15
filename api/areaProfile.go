@@ -173,8 +173,11 @@ func (s *Server) placeProfile(c *gin.Context) {
 		ScoreDelta      float64                    `json:"autonomy_score_delta"`
 	}
 
-	resources := []schema.POIResourceRating{}
 	resources = poi.ResourceRatings.Resources
+	if nil == resources {
+		resources = []schema.POIResourceRating{}
+	}
+
 	if !params.AllReosurces { // return 10 records and indicate more or not
 		if len(poi.ResourceRatings.Resources) > 10 {
 			resources = poi.ResourceRatings.Resources[:10]
