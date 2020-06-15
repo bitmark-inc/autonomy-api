@@ -150,7 +150,7 @@ func (s *Server) placeProfile(c *gin.Context) {
 		}
 	}
 	if !poiFound {
-		abortWithEncoding(c, http.StatusBadRequest, errorNoPOIInProfile, err)
+		abortWithEncoding(c, http.StatusBadRequest, errorNoPOIInProfile)
 	}
 
 	// Get POI Resources
