@@ -632,5 +632,5 @@ func (m *mongoDB) GetProfilesRatingMetricByPOI(account string, poiID primitive.O
 	if len(p.PointsOfInterest) > 0 {
 		return p.PointsOfInterest[0].ResourceRatings, nil
 	}
-	return schema.ProfileRatingsMetric{}, fmt.Errorf("POI not found")
+	return schema.ProfileRatingsMetric{}, ErrPOINotFound
 }

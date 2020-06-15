@@ -57,11 +57,14 @@ func (s *Server) updatePOIRating(c *gin.Context) {
 		if resovErr != nil || "" == name { // show original name
 			c.Error(fmt.Errorf("resovError:%v", resovErr))
 		}
-		rating := schema.RatingResource{
-			Resource: schema.Resource{ID: r.ResourceID, Name: name},
-			Score:    float64(r.Score),
+		if r.Score > 0 { // score zero means unrated, score cant be zero
+			rating := schema.RatingResource{
+				Resource: schema.Resource{ID: r.ResourceID, Name: name},
+				Score:    float64(r.Score),
+			}
+			profileMetric.Resources = append(profileMetric.Resources, rating)
 		}
-		profileMetric.Resources = append(profileMetric.Resources, rating)
+
 	}
 
 	if err := s.mongoStore.UpdatePOIRatingMetric(account.AccountNumber, poiID, profileMetric.Resources); err != nil {
@@ -146,6 +149,8 @@ func (s *Server) getProfileRatings(c *gin.Context) {
 	sort.SliceStable(metric.Resources, func(i, j int) bool {
 		return metric.Resources[i].Score > metric.Resources[j].Score // Inverse sort
 	})
-
+	if nil == metric.Resources {
+		metric.Resources = []schema.RatingResource{}
+	}
 	c.JSON(http.StatusOK, gin.H{"ratings": metric.Resources})
 }
