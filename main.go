@@ -15,7 +15,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"googlemaps.github.io/maps"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/getsentry/sentry-go"
@@ -187,18 +186,7 @@ func main() {
 		log.Panicf("connect mongo database with error: %s", err)
 	}
 
-	mapClient, err := maps.NewClient(maps.WithAPIKey(viper.GetString("map.key")))
-	if err != nil {
-		log.Panicf("init goolge map client with error: %s", err.Error())
-	}
-
-	geo.SetLocationResolver(
-		geo.NewMultipleLocationResolver(
-			geo.NewMongodbLocationResolver(mongoClient, viper.GetString("mongo.database")),
-			geo.NewGeocodingLocationResolver(mapClient),
-		),
-	)
-
+	geo.SetLocationResolver(geo.NewMongodbLocationResolver(mongoClient, viper.GetString("mongo.database")))
 	geo.SetLocationSearcher(geo.NewNominatimSearcher(viper.GetString("nominatim.endpoint")))
 
 	aqiClient := aqi.New(viper.GetString("aqi.key"), "")

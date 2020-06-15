@@ -36,9 +36,9 @@ type reportItemQueryParams struct {
 }
 
 type reportItem struct {
-	Name       string  `json:"name"`
-	Value      int     `json:"value"`
-	ChangeRate float64 `json:"change_rate"`
+	Name       string   `json:"name"`
+	Value      *int     `json:"value"`
+	ChangeRate *float64 `json:"change_rate"`
 }
 
 func (s *Server) getReportItems(c *gin.Context) {
@@ -121,8 +121,8 @@ func (s *Server) getReportItems(c *gin.Context) {
 			return
 		}
 		results := gatherReportItems(
-			map[string]int{"autonomy_score": int(currAvgScore)},
-			map[string]int{"autonomy_score": int(prevAvgScore)})
+			map[string]int{"autonomy score": int(currAvgScore)},
+			map[string]int{"autonomy score": int(prevAvgScore)})
 		items := getReportItemsForDisplay(results, func(scoreID string) string {
 			// TODO: translate
 			return scoreID
@@ -179,6 +179,11 @@ func (s *Server) getReportItems(c *gin.Context) {
 		})
 		c.JSON(http.StatusOK, gin.H{"report_items": items})
 	case reportItemTypeCase:
+		if _, ok := schema.CDSCountyCollectionMatrix[schema.CDSCountryType(loc.Country)]; !ok {
+			name, _ := localizer.Localize(&i18n.LocalizeConfig{MessageID: fmt.Sprintf("conditions.%s.name", "covid_19")})
+			c.JSON(http.StatusOK, gin.H{"report_items": []*reportItem{{Name: name}}})
+			return
+		}
 		currActiveCount, _, _, err := s.mongoStore.GetCDSActive(loc, currentPeriodEnd)
 		if err != nil {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
@@ -215,13 +220,18 @@ func gatherReportItems(currentDistribution, previousDistribution map[string]int)
 		// For each reported item shown in this period, assume it's not reported in the previous period,
 		// So the change rate is 100 by default.
 		// If it's also reported in the previous period, the rate will be adjusted accordingly.
-		items[itemID] = &reportItem{Value: value, ChangeRate: 100}
+		v := value
+		changeRate := 100.0
+		items[itemID] = &reportItem{Value: &v, ChangeRate: &changeRate}
 	}
 	for itemID, value := range previousDistribution {
 		if _, ok := items[itemID]; ok { // reported both in the current and previous periods
-			items[itemID].ChangeRate = score.ChangeRate(float64(items[itemID].Value), float64(value))
+			changeRate := score.ChangeRate(float64(*items[itemID].Value), float64(value))
+			items[itemID].ChangeRate = &changeRate
 		} else { // only reported in the previous period
-			items[itemID] = &reportItem{Value: 0, ChangeRate: -100}
+			v := 0
+			changeRate := -100.0
+			items[itemID] = &reportItem{Value: &v, ChangeRate: &changeRate}
 		}
 	}
 	return items
