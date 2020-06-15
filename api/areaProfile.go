@@ -205,7 +205,7 @@ func (s *Server) placeProfile(c *gin.Context) {
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 		return
 	}
-	score, delta := score.CalculatePOIAutonomyScore(resources, *metric)
+	score, _, delta := score.CalculatePOIAutonomyScore(resources, *metric)
 	resp.ID = poi.ID.Hex()
 	resp.Alias = profilePoi.Alias
 	resp.Address = profilePoi.Address

@@ -18,6 +18,7 @@ import (
 
 	"github.com/bitmark-inc/autonomy-api/geo"
 	"github.com/bitmark-inc/autonomy-api/schema"
+	"github.com/bitmark-inc/autonomy-api/score"
 	"github.com/bitmark-inc/autonomy-api/utils"
 )
 
@@ -268,13 +269,19 @@ func (m *mongoDB) ListPOI(accountNumber string) ([]schema.POIDetail, error) {
 		}).Error("poi data wrongly retrieved or removed")
 		return nil, fmt.Errorf("poi data wrongly retrieved or removed")
 	}
-
+	defaultCoefficient := schema.ScoreCoefficient{
+		Symptoms:  score.DefaultScoreV1SymptomCoefficient,
+		Behaviors: score.DefaultScoreV1BehaviorCoefficient,
+		Confirms:  score.DefaultScoreV1ConfirmCoefficient,
+	}
 	for i := range result.Points {
 		if l := pois[i].Location; l != nil {
 			result.Points[i].Location = &schema.Location{
 				Longitude: l.Coordinates[0],
 				Latitude:  l.Coordinates[1],
 			}
+			m.SyncAccountPOIMetrics(accountNumber, &defaultCoefficient, pois[i].ID)
+			m.SyncPOIMetrics(pois[i].ID, *result.Points[i].Location)
 		}
 	}
 

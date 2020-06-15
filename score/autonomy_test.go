@@ -87,7 +87,7 @@ func TestCalculatePOIAutonomyScore(t *testing.T) {
 		},
 	}
 
-	score, delta := CalculatePOIAutonomyScore(resources, neighbor)
+	score, _, delta := CalculatePOIAutonomyScore(resources, neighbor)
 	assert.Equal(t, 73.15789473684211, score)
 	assert.Equal(t, -11.092836257309942, delta)
 }

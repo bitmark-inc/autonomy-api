@@ -250,7 +250,9 @@ func (m *mongoDB) SyncAccountPOIMetrics(accountNumber string, coefficient *schem
 			}).Debug("collect raw metrics")
 
 			metric := score.CalculateMetric(*rawMetrics, coefficient)
-
+			score, scoreYesterday, _ := score.CalculatePOIAutonomyScore(poi.ResourceRatings.Resources, metric)
+			metric.AutonomyScore = score
+			metric.AutonomyScoreYesterday = scoreYesterday
 			if err := m.UpdateProfilePOIMetric(accountNumber, poiID, metric); err != nil {
 				return nil, err
 			}
@@ -271,7 +273,10 @@ func (m *mongoDB) SyncPOIMetrics(poiID primitive.ObjectID, location schema.Locat
 	if err != nil {
 		return nil, err
 	}
-
+	poiResourceMetric, err := m.GetPOIResourceMetric(poiID)
+	score, scoreYesterday, _ := score.CalculatePOIAutonomyScore(poiResourceMetric.Resources, metric)
+	metric.AutonomyScore = score
+	metric.AutonomyScoreYesterday = scoreYesterday
 	if err := m.UpdatePOIMetric(poiID, metric); err != nil {
 		return nil, err
 	}

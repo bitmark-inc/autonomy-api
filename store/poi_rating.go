@@ -50,7 +50,6 @@ func (m *mongoDB) UpdatePOIRatingMetric(accountNumber string, poiID primitive.Ob
 
 	profileMetric, err := m.GetProfilesRatingMetricByPOI(accountNumber, poiID)
 
-	log.Info("profileMetric:", profileMetric)
 	if err != nil && err != ErrPOINotFound {
 		log.WithFields(log.Fields{
 			"prefix":        mongoLogPrefix,
