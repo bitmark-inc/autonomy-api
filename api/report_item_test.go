@@ -17,21 +17,10 @@ func TestGenerateIntevalReport(t *testing.T) {
 	}
 
 	entries := gatherReportItems(currentDistribution, previousDistribution)
-	assert.Equal(t, map[string]*reportItem{
-		"a": {
-			Name:       "",
-			Value:      3,
-			ChangeRate: 100,
-		},
-		"b": {
-			Name:       "",
-			Value:      5,
-			ChangeRate: 150,
-		},
-		"c": {
-			Name:       "",
-			Value:      0,
-			ChangeRate: -100,
-		},
-	}, entries)
+	assert.Equal(t, 3, *entries["a"].Value)
+	assert.Equal(t, 100.0, *entries["a"].ChangeRate)
+	assert.Equal(t, 5, *entries["b"].Value)
+	assert.Equal(t, 150.0, *entries["b"].ChangeRate)
+	assert.Equal(t, 0, *entries["c"].Value)
+	assert.Equal(t, -100.0, *entries["c"].ChangeRate)
 }
