@@ -47,6 +47,7 @@ type IndividualMetric struct {
 	SymptomDelta   float64 `json:"symptom_delta" bson:"symptoms_delta"`
 	BehaviorCount  float64 `json:"behavior" bson:"behavior"`
 	BehaviorDelta  float64 `json:"behavior_delta" bson:"behavior_delta"`
+	LastUpdate     int64   `json:"last_update" bson:"last_update"`
 }
 
 type Metric struct {

@@ -69,6 +69,17 @@ func (s *Server) currentAreaProfile(c *gin.Context) {
 	individualMetric := profile.IndividualMetric
 	metric := profile.Metric
 
+	if time.Since(time.Unix(individualMetric.LastUpdate, 0)) >= metricUpdateInterval {
+		i, err := s.mongoStore.SyncProfileIndividualMetrics(profile.ID)
+		if err != nil {
+			c.Error(err)
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+			return
+		} else {
+			individualMetric = *i
+		}
+	}
+
 	if profile.Location != nil {
 		location := schema.Location{
 			Latitude:  profile.Location.Coordinates[1],

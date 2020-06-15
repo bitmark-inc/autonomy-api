@@ -442,6 +442,8 @@ func (m *mongoDB) UpdateProfileIndividualMetric(profileID string, metric schema.
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 
+	metric.LastUpdate = time.Now().Unix()
+
 	c := m.client.Database(m.database).Collection(schema.ProfileCollection)
 	query := bson.M{
 		"id": profileID,
