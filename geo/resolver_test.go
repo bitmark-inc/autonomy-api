@@ -329,5 +329,5 @@ func (s *ResolverTestSuite) TestMultipleLocationResolverMongodbNotFound() {
 // a normal test function and pass our suite to s.Run
 func TestResolverTestSuite(t *testing.T) {
 	mapKey := os.Getenv("MAP_APIKEY")
-	suite.Run(t, NewResolverTestSuite("mongodb://127.0.0.1:27017/?compressors=disabled", "test-db", mapKey))
+	suite.Run(t, NewResolverTestSuite("mongodb://127.0.0.1:27017/?compressors=disabled", "test-geo", mapKey))
 }
