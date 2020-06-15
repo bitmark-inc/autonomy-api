@@ -8,7 +8,7 @@ type Resource struct {
 
 type RatingResource struct {
 	Resource `json:"resource" bson:"resource"`
-	Score    float64 `json:"score " bson:"score"`
+	Score    float64 `json:"score" bson:"score"`
 }
 
 type ProfileRatingsMetric struct {
