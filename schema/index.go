@@ -144,13 +144,13 @@ func (m *MongoDBIndexer) IndexSymptomReportCollection() error {
 
 func (m *MongoDBIndexer) IndexBoundryCollection() error {
 	if err := m.createIndex(BoundaryCollection, mongo.IndexModel{
-		Keys: bson.M{
-			"county":  1,
-			"island":  1,
-			"country": 1,
-			"state":   1,
+		Keys: bson.D{
+			{Key: "country", Value: 1},
+			{Key: "island", Value: 1},
+			{Key: "state", Value: 1},
+			{Key: "county", Value: 1},
 		},
-		Options: options.Index().SetUnique(true),
+		Options: options.Index().SetUnique(true).SetName("unique_boundary"),
 	}); err != nil {
 		return err
 	}
