@@ -161,10 +161,10 @@ func (s *Server) placeProfile(c *gin.Context) {
 		return
 	}
 	var resp struct {
-		ID              string                     `json:"id"`
-		Alias           string                     `json:"alias"`
-		Address         string                     `json:"address"`
-		Location        *schema.GeoJSON            `json:"location"`
+		ID      string `json:"id"`
+		Alias   string `json:"alias"`
+		Address string `json:"address"`
+		//Location        *schema.Location           `json:"location"`
 		Rating          bool                       `json:"rating"`
 		HasMoreResource bool                       `json:"has_more_resources"`
 		Metric          schema.Metric              `json:"neighbor"`
@@ -198,7 +198,8 @@ func (s *Server) placeProfile(c *gin.Context) {
 	resp.ID = poi.ID.Hex()
 	resp.Alias = profilePoi.Alias
 	resp.Address = profilePoi.Address
-	resp.Location = poi.Location
+	//resp.Location = poi.Location
+
 	if len(profilePoi.ResourceRatings.Resources) > 0 {
 		resp.Rating = true
 	}
