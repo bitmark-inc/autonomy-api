@@ -30,6 +30,10 @@ Mac: `brew install gdal`
     ogr2ogr -f "GeoJSON" -t_srs EPSG:4326 world-boundary.json World_Countries__Generalized_.shp
     ```
 
+### US Boundary
+
+1. Download GeoJSON file [open data](https://public.opendatasoft.com/explore/dataset/us-county-boundaries/export/)
+
 ## Import boundary data to DB
 
 ```

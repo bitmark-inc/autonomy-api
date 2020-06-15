@@ -34,8 +34,12 @@ var TaiwanLocationTestData = []schema.Location{
 }
 
 var USLocationTestData = []schema.Location{
-	{Latitude: 33.036147, Longitude: -117.2842319, AddressComponent: schema.AddressComponent{Country: "United States", State: "California", County: "San Diego County"}},
-	{Latitude: 40.733992, Longitude: -73.993641, AddressComponent: schema.AddressComponent{Country: "United States", State: "New York", County: "New York County"}},
+	{Latitude: 38.876408, Longitude: -77.433901, AddressComponent: schema.AddressComponent{Country: "United States", State: "Virginia", County: "Fairfax County"}},
+	{Latitude: 33.068212, Longitude: -116.765943, AddressComponent: schema.AddressComponent{Country: "United States", State: "California", County: "San Diego County"}},
+	{Latitude: 30.151855, Longitude: -84.522030, AddressComponent: schema.AddressComponent{Country: "United States", State: "Florida", County: "Wakulla County"}},
+	{Latitude: 40.776032, Longitude: -73.959463, AddressComponent: schema.AddressComponent{Country: "United States", State: "New York", County: "New York County"}},
+	{Latitude: 69.553596, Longitude: -157.072916, AddressComponent: schema.AddressComponent{Country: "United States", State: "Alaska", County: "North Slope Borough"}},
+	{Latitude: 32.601252, Longitude: -92.671741, AddressComponent: schema.AddressComponent{Country: "United States", State: "Louisiana", County: "Lincoln Parish"}},
 }
 
 var OtherLocationTestData = []schema.Location{
@@ -68,12 +72,14 @@ func (s *ResolverTestSuite) SetupSuite() {
 		s.T().Fatalf("connect mongo database with error: %s", err.Error())
 	}
 
-	mapClient, err := maps.NewClient(maps.WithAPIKey(s.mapAPIKey))
-	if err != nil {
-		s.T().Fatalf("init goolge map client with error: %s", err.Error())
+	if s.mapAPIKey != "" {
+		mapClient, err := maps.NewClient(maps.WithAPIKey(s.mapAPIKey))
+		if err != nil {
+			s.T().Fatalf("init goolge map client with error: %s", err.Error())
+		}
+		s.mapClient = mapClient
 	}
 
-	s.mapClient = mapClient
 	s.mongoClient = mongoClient
 	s.testDatabase = mongoClient.Database(s.testDBName)
 
@@ -92,6 +98,10 @@ func (s *ResolverTestSuite) LoadMongoDBFixtures() error {
 		return err
 	}
 
+	if err := geojson.ImportUSBoundary(s.mongoClient, s.testDBName, "../share/geojson/us-boundary.geojson"); err != nil {
+		return err
+	}
+
 	return geojson.ImportWorldCountryBoundary(s.mongoClient, s.testDBName, "../share/geojson/world-boundary.json")
 }
 
@@ -100,6 +110,10 @@ func (s *ResolverTestSuite) CleanMongoDB() error {
 }
 
 func (s *ResolverTestSuite) TestGeocodingLocationResolverForTaiwan() {
+	if s.mapAPIKey == "" {
+		s.T().Skip("Skip resolver tests due to missing map api key")
+	}
+
 	r := NewGeocodingLocationResolver(s.mapClient)
 
 	for _, testdata := range TaiwanLocationTestData {
@@ -116,6 +130,10 @@ func (s *ResolverTestSuite) TestGeocodingLocationResolverForTaiwan() {
 }
 
 func (s *ResolverTestSuite) TestGeocodingLocationResolverForUSLocation() {
+	if s.mapAPIKey == "" {
+		s.T().Skip("Skip resolver tests due to missing map api key")
+	}
+
 	r := NewGeocodingLocationResolver(s.mapClient)
 
 	for _, testdata := range USLocationTestData {
@@ -132,6 +150,10 @@ func (s *ResolverTestSuite) TestGeocodingLocationResolverForUSLocation() {
 }
 
 func (s *ResolverTestSuite) TestGeocodingLocationResolverNotFound() {
+	if s.mapAPIKey == "" {
+		s.T().Skip("Skip resolver tests due to missing map api key")
+	}
+
 	r := NewGeocodingLocationResolver(s.mapClient)
 
 	location, err := r.GetPoliticalInfo(schema.Location{ // sea near by Hsinchu
@@ -150,6 +172,22 @@ func (s *ResolverTestSuite) TestMongodbLocationResolverForTaiwan() {
 	r := NewMongodbLocationResolver(s.mongoClient, s.testDBName)
 
 	for _, testdata := range TaiwanLocationTestData {
+		location, err := r.GetPoliticalInfo(schema.Location{
+			Latitude:  testdata.Latitude,
+			Longitude: testdata.Longitude,
+		})
+
+		s.NoError(err)
+		s.Equal(testdata.Country, location.Country)
+		s.Equal(testdata.State, location.State)
+		s.Equal(testdata.County, location.County)
+	}
+}
+
+func (s *ResolverTestSuite) TestMongodbLocationResolverForUSLocation() {
+	r := NewMongodbLocationResolver(s.mongoClient, s.testDBName)
+
+	for _, testdata := range USLocationTestData {
 		location, err := r.GetPoliticalInfo(schema.Location{
 			Latitude:  testdata.Latitude,
 			Longitude: testdata.Longitude,
@@ -194,6 +232,10 @@ func (s *ResolverTestSuite) TestMongodbLocationResolverNotFound() {
 }
 
 func (s *ResolverTestSuite) TestMultipleLocationResolverForTaiwan() {
+	if s.mapAPIKey == "" {
+		s.T().Skip("Skip resolver tests due to missing map api key")
+	}
+
 	r := NewMultipleLocationResolver(
 		NewMongodbLocationResolver(s.mongoClient, s.testDBName),
 		NewGeocodingLocationResolver(s.mapClient),
@@ -213,6 +255,10 @@ func (s *ResolverTestSuite) TestMultipleLocationResolverForTaiwan() {
 }
 
 func (s *ResolverTestSuite) TestMultipleLocationResolverForUSLocation() {
+	if s.mapAPIKey == "" {
+		s.T().Skip("Skip resolver tests due to missing map api key")
+	}
+
 	r := NewMultipleLocationResolver(
 		NewMongodbLocationResolver(s.mongoClient, s.testDBName),
 		NewGeocodingLocationResolver(s.mapClient),
@@ -232,6 +278,10 @@ func (s *ResolverTestSuite) TestMultipleLocationResolverForUSLocation() {
 }
 
 func (s *ResolverTestSuite) TestMultipleLocationResolverForOtherLocation() {
+	if s.mapAPIKey == "" {
+		s.T().Skip("Skip resolver tests due to missing map api key")
+	}
+
 	r := NewMultipleLocationResolver(
 		NewMongodbLocationResolver(s.mongoClient, s.testDBName),
 		NewGeocodingLocationResolver(s.mapClient),
@@ -251,6 +301,10 @@ func (s *ResolverTestSuite) TestMultipleLocationResolverForOtherLocation() {
 }
 
 func (s *ResolverTestSuite) TestMultipleLocationResolverMongodbNotFound() {
+	if s.mapAPIKey == "" {
+		s.T().Skip("Skip resolver tests due to missing map api key")
+	}
+
 	r := NewMultipleLocationResolver(
 		NewMongodbLocationResolver(s.mongoClient, s.testDBName),
 		NewGeocodingLocationResolver(s.mapClient),
@@ -275,8 +329,5 @@ func (s *ResolverTestSuite) TestMultipleLocationResolverMongodbNotFound() {
 // a normal test function and pass our suite to s.Run
 func TestResolverTestSuite(t *testing.T) {
 	mapKey := os.Getenv("MAP_APIKEY")
-	if mapKey == "" {
-		t.Skip("Skip resolver tests due to missing map api key")
-	}
 	suite.Run(t, NewResolverTestSuite("mongodb://127.0.0.1:27017/?compressors=disabled", "test-db", mapKey))
 }
