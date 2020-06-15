@@ -39,27 +39,30 @@ func (s *Server) updatePOIRating(c *gin.Context) {
 	}
 
 	type userRating struct {
-		ResourceID string `json:"resource_id"`
-		Score      int    `json:"score"`
+		Resource schema.Resource `json:"resource"`
+		Score    int             `json:"score"`
 	}
 
 	var body struct {
 		Ratings []userRating `json:"ratings"`
 	}
-	log.Info(c.Request.Body)
+
 	if err := c.BindJSON(&body); err != nil {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
 		return
 	}
+
 	var profileMetric schema.ProfileRatingsMetric
 	for _, r := range body.Ratings {
-		name, resovErr := store.ResolveResourceNameByID(r.ResourceID, params.Language)
+
+		name, resovErr := store.ResolveResourceNameByID(r.Resource.ID, params.Language)
 		if resovErr != nil || "" == name { // show original name
 			c.Error(fmt.Errorf("resovError:%v", resovErr))
 		}
+
 		if r.Score > 0 { // score zero means unrated, score cant be zero
 			rating := schema.RatingResource{
-				Resource: schema.Resource{ID: r.ResourceID, Name: name},
+				Resource: schema.Resource{ID: r.Resource.ID, Name: name},
 				Score:    float64(r.Score),
 			}
 			profileMetric.Resources = append(profileMetric.Resources, rating)
