@@ -173,7 +173,7 @@ func (s *Server) placeProfile(c *gin.Context) {
 		ScoreDelta      float64                    `json:"autonomy_score_delta"`
 	}
 
-	resources = poi.ResourceRatings.Resources
+	resources := poi.ResourceRatings.Resources
 	if nil == resources {
 		resources = []schema.POIResourceRating{}
 	}
