@@ -2,6 +2,7 @@ package score
 
 import (
 	"testing"
+	"time"
 
 	"github.com/bitmark-inc/autonomy-api/schema"
 	"github.com/stretchr/testify/assert"
@@ -39,4 +40,54 @@ func TestCalculateIndividualAutonomyScoreDecrease(t *testing.T) {
 	score, delta := CalculateIndividualAutonomyScore(individualMetric, metric)
 	assert.Equal(t, 50.0, score)
 	assert.Equal(t, -47.91666666666667, delta)
+}
+
+func TestCalculatePOIAutonomyScore(t *testing.T) {
+	neighbor := schema.Metric{
+		Score:          50,
+		ScoreYesterday: 80,
+	}
+
+	resources := []schema.POIResourceRating{
+		schema.POIResourceRating{
+			Resource:       schema.Resource{ID: "resource_1"},
+			SumOfScore:     45,
+			Score:          4.5,
+			Ratings:        10,
+			LastDayRatings: 8,
+			LastDayScore:   4.625,
+			LastUpdate:     time.Now().Unix(),
+		},
+		schema.POIResourceRating{
+			Resource:       schema.Resource{ID: "resource_2"},
+			SumOfScore:     30,
+			Score:          3.75,
+			Ratings:        8,
+			LastDayRatings: 6,
+			LastDayScore:   3.5,
+			LastUpdate:     time.Now().Unix(),
+		},
+		schema.POIResourceRating{
+			Resource:       schema.Resource{ID: "resource_3"},
+			SumOfScore:     0,
+			Score:          0,
+			Ratings:        1,
+			LastDayRatings: 0,
+			LastDayScore:   0,
+			LastUpdate:     time.Now().Unix(),
+		},
+		schema.POIResourceRating{
+			Resource:       schema.Resource{ID: "resource_4"},
+			SumOfScore:     0,
+			Score:          0,
+			Ratings:        0,
+			LastDayRatings: 0,
+			LastDayScore:   0,
+			LastUpdate:     time.Now().Unix(),
+		},
+	}
+
+	score, delta := CalculatePOIAutonomyScore(resources, neighbor)
+	assert.Equal(t, 73.15789473684211, score)
+	assert.Equal(t, -11.092836257309942, delta)
 }

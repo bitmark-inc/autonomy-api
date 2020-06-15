@@ -39,6 +39,10 @@ type MongoAccount interface {
 	ProfileMetric(accountNumber string) (*schema.Metric, error)
 	UpdateAreaProfileBehavior(behaviors []schema.Behavior, location schema.Location) error
 	UpdateAreaProfileSymptom(symptoms []schema.Symptom, location schema.Location) error
+
+	UpdateProfilePOIRatingMetric(accountNumber string, poiID primitive.ObjectID, metric schema.ProfileRatingsMetric) error
+	GetProfilePOIRatingMetric(accountNumber string, id string) (schema.ProfileRatingsMetric, error)
+	GetProfilesRatingMetricByPOI(account string, poiID primitive.ObjectID) (schema.ProfileRatingsMetric, error)
 }
 
 var (
@@ -553,4 +557,78 @@ func (m *mongoDB) GetProfilesByPOI(id string) ([]schema.Profile, error) {
 	}
 
 	return profiles, nil
+}
+
+func (m *mongoDB) UpdateProfilePOIRatingMetric(accountNumber string, poiID primitive.ObjectID, metric schema.ProfileRatingsMetric) error {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+
+	c := m.client.Database(m.database).Collection(schema.ProfileCollection)
+	query := bson.M{
+		"account_number":        accountNumber,
+		"points_of_interest.id": poiID,
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"points_of_interest.$.resource_ratings": metric,
+			"points_of_interest.$.updated_at":       time.Now().UTC(),
+		},
+	}
+
+	result, err := c.UpdateOne(ctx, query, update)
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return errAccountNotFound
+	}
+
+	return nil
+}
+
+func (m *mongoDB) GetProfilePOIRatingMetric(accountNumber string, id string) (schema.ProfileRatingsMetric, error) {
+	c := m.client.Database(m.database).Collection(schema.ProfileCollection)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+	log.WithField("prefix", mongoLogPrefix).Debugf("get accounts:%s by POI id:%s", accountNumber, id)
+
+	filter := bson.D{{"account_number", accountNumber}, {}}
+	var result schema.Profile
+	err := c.FindOne(ctx, filter).Decode(&result)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"prefix":         mongoLogPrefix,
+			"Account number": accountNumber,
+			"error":          err,
+		}).Error("get profile fail")
+		return schema.ProfileRatingsMetric{}, err
+	}
+	for _, p := range result.PointsOfInterest {
+		if p.ID.Hex() == id {
+			return p.ResourceRatings, nil
+		}
+	}
+
+	return schema.ProfileRatingsMetric{}, ErrPOINotFound
+}
+func (m *mongoDB) GetProfilesRatingMetricByPOI(account string, poiID primitive.ObjectID) (schema.ProfileRatingsMetric, error) {
+	log.WithField("prefix", mongoLogPrefix).Debugf("get accounts by POI id: %s", poiID.Hex())
+
+	c := m.client.Database(m.database).Collection(schema.ProfileCollection)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+
+	query := bson.M{"account_number": account}
+	filter := bson.M{"points_of_interest": bson.D{{"$elemMatch", bson.M{"id": poiID}}}}
+	var p schema.Profile
+
+	err := c.FindOne(ctx, query, options.FindOne().SetProjection(filter)).Decode(&p)
+	if err != nil {
+		return schema.ProfileRatingsMetric{}, err
+	}
+	if len(p.PointsOfInterest) > 0 {
+		return p.PointsOfInterest[0].ResourceRatings, nil
+	}
+	return schema.ProfileRatingsMetric{}, fmt.Errorf("POI not found")
 }

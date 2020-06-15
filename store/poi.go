@@ -85,8 +85,8 @@ func LoadDefaultPOIResources(lang string) error {
 	return nil
 }
 
-// resolveResourceNameByID returns the name of a given resource id by languages
-func resolveResourceNameByID(id, lang string) (string, error) {
+// ResolveResourceNameByID returns the name of a given resource id by languages
+func ResolveResourceNameByID(id, lang string) (string, error) {
 	lang = strings.ReplaceAll(strings.ToLower(lang), "-", "_")
 
 	m, ok := defaultResourceIDMap[lang]
@@ -131,6 +131,8 @@ type POI interface {
 
 	AddPOIResources(poiID primitive.ObjectID, resources []schema.Resource, lang string) ([]schema.Resource, error)
 	GetPOIResources(poiID primitive.ObjectID, importantOnly bool, lang string) ([]schema.Resource, error)
+	GetPOIResourceMetric(poiID primitive.ObjectID) (schema.POIRatingsMetric, error)
+	UpdatePOIRatingMetric(accountNumber string, poiID primitive.ObjectID, ratings []schema.RatingResource) error
 }
 
 // AddPOI inserts a new POI record if it doesn't exist and append it to user's profile
@@ -595,7 +597,8 @@ func (m *mongoDB) AddPOIResources(poiID primitive.ObjectID, resources []schema.R
 	defer cancel()
 	db := m.client.Database(m.database)
 
-	if err := db.Collection(schema.POICollection).FindOne(ctx, bson.M{"_id": poiID}).Decode(&schema.POI{}); err != nil {
+	poi := schema.POI{}
+	if err := db.Collection(schema.POICollection).FindOne(ctx, bson.M{"_id": poiID}).Decode(&poi); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, ErrPOINotFound
 		}
@@ -606,7 +609,7 @@ func (m *mongoDB) AddPOIResources(poiID primitive.ObjectID, resources []schema.R
 		resource := &resources[i]
 		if resource.ID != "" {
 			var err error
-			resource.Name, err = resolveResourceNameByID(resource.ID, lang)
+			resource.Name, err = ResolveResourceNameByID(resource.ID, lang)
 			if err != nil {
 				return nil, err
 			}
