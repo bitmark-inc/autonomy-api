@@ -33,19 +33,20 @@ func (s *Server) updatePOIRating(c *gin.Context) {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
 		return
 	}
+
 	if "" == params.Language {
 		params.Language = "en"
 	}
 
 	type userRating struct {
-		ResourceID string `json:"resource_id"`
+		ResourceID string `json:"id"`
 		Score      int    `json:"score"`
 	}
 
 	var body struct {
 		Ratings []userRating `json:"ratings"`
 	}
-
+	log.Info(c.Request.Body)
 	if err := c.BindJSON(&body); err != nil {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
 		return
