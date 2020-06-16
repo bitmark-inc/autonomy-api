@@ -25,19 +25,6 @@ func (s *Server) updatePOIRating(c *gin.Context) {
 		return
 	}
 
-	var params struct {
-		Language string `form:"lang"`
-	}
-
-	if err := c.BindQuery(&params); err != nil {
-		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
-		return
-	}
-
-	if "" == params.Language {
-		params.Language = "en"
-	}
-
 	type userRating struct {
 		Resource schema.Resource `json:"resource"`
 		Score    int             `json:"score"`
