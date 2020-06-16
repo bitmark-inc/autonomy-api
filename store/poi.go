@@ -91,6 +91,10 @@ func LoadDefaultPOIResources(lang string) error {
 func ResolveResourceNameByID(id, lang string) (string, error) {
 	lang = strings.ReplaceAll(strings.ToLower(lang), "-", "_")
 
+	if lang == "zh" {
+		lang = "zh_tw"
+	}
+
 	m, ok := defaultResourceIDMap[lang]
 	if !ok {
 		m = defaultResourceIDMap["en"]
