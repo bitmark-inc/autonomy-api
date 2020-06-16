@@ -268,6 +268,14 @@ func (m *mongoDB) ListPOI(accountNumber string) ([]schema.POIDetail, error) {
 		}).Error("poi data wrongly retrieved or removed")
 		return nil, fmt.Errorf("poi data wrongly retrieved or removed")
 	}
+	for i := range result.Points {
+		if l := pois[i].Location; l != nil {
+			result.Points[i].Location = &schema.Location{
+				Longitude: l.Coordinates[0],
+				Latitude:  l.Coordinates[1],
+			}
+		}
+	}
 
 	return result.Points, nil
 }
