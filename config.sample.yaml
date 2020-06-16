@@ -1,4 +1,5 @@
 server:
+  trace_mode: false
   port: 8880
   mode: release #debug or release
   baseurl:
@@ -30,6 +31,7 @@ sentry:
 account:
   seed:
 onesignal:
+  trace_mode: false
   endpoint: https://onesignal.com
   key:
   appid:
@@ -37,6 +39,7 @@ onesignal:
     new_location_status_change:
     saved_location_status_change:
 nominatim:
+  trace_mode: false
   endpoint:
 clients:
   android:

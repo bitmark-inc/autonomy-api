@@ -9,6 +9,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 type QueryResult struct {
@@ -23,13 +24,15 @@ type QueryResult struct {
 }
 
 type NominatimClient struct {
-	endpoint string
-	client   *http.Client
+	traceMode bool
+	endpoint  string
+	client    *http.Client
 }
 
 func New(endpoint string) *NominatimClient {
 	return &NominatimClient{
-		endpoint: endpoint,
+		traceMode: viper.GetBool("nominatim.trace_mode"),
+		endpoint:  endpoint,
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -46,7 +49,9 @@ func (n *NominatimClient) Query(query string) ([]QueryResult, error) {
 	}
 
 	reqString := fmt.Sprintf("%s/%s", n.endpoint, q.String())
-	log.WithField("prefix", "nominatim").WithField("req", reqString).Debug("request from nominatim")
+	if n.traceMode {
+		log.WithField("prefix", "nominatim").WithField("req", reqString).Debug("request from nominatim")
+	}
 
 	resp, err := n.client.Get(reqString)
 	if err != nil {
@@ -54,18 +59,18 @@ func (n *NominatimClient) Query(query string) ([]QueryResult, error) {
 	}
 	defer resp.Body.Close()
 
-	// Print out the response in console log
-	dumpBytes, err := httputil.DumpResponse(resp, true)
-	if err != nil {
-		log.WithField("prefix", "nominatim").WithError(err).Error("fail to dump response")
+	if n.traceMode {
+		dumpBytes, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			log.WithField("prefix", "nominatim").WithError(err).Error("fail to dump response")
+		}
+
+		log.WithField("prefix", "nominatim").WithField("resp", string(dumpBytes)).Debug("response from nominatim")
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.WithField("prefix", "nominatim").WithField("resp", string(dumpBytes)).Error("error response from nominatim")
 		return nil, fmt.Errorf("fail to query address")
 	}
-
-	log.WithField("prefix", "nominatim").WithField("resp", string(dumpBytes)).Debug("response from nominatim")
 
 	var result []QueryResult
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {

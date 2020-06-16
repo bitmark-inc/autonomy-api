@@ -20,6 +20,7 @@ func IsErrAllPlayersNotSubscribed(err error) bool {
 
 type OneSignalClient struct {
 	httpClient *http.Client
+	traceMode  bool
 	endpoint   string
 	apiKey     string
 	appID      string
@@ -73,6 +74,7 @@ type NotificationRequest struct {
 func NewClient(httpClient *http.Client) *OneSignalClient {
 	return &OneSignalClient{
 		httpClient: httpClient,
+		traceMode:  viper.GetBool("onesignal.trace_mode"),
 		endpoint:   viper.GetString("onesignal.endpoint"),
 		apiKey:     viper.GetString("onesignal.key"),
 		appID:      viper.GetString("onesignal.appid"),
@@ -106,27 +108,29 @@ func (os *OneSignalClient) SendNotification(ctx context.Context, reqBody *Notifi
 		return err
 	}
 
-	dumpBytes, err := httputil.DumpRequest(req, true)
-	if err != nil {
-		log.WithField("prefix", "onesignal").Error(err)
-	}
+	if os.traceMode {
+		dumpBytes, err := httputil.DumpRequest(req, true)
+		if err != nil {
+			log.WithField("prefix", "onesignal").Error(err)
+		}
 
-	log.WithField("prefix", "onesignal").WithField("req", string(dumpBytes)).Debug("request to onesignal")
+		log.WithField("prefix", "onesignal").WithField("req", string(dumpBytes)).Debug("request to onesignal")
+	}
 
 	resp, err := os.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
 
-	// Print out the response in console log
-	dumpBytes, err = httputil.DumpResponse(resp, true)
-	if err != nil {
-		log.WithField("prefix", "onesignal").Error(err)
+	if os.traceMode {
+		dumpBytes, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			log.WithField("prefix", "onesignal").Error(err)
+		}
+
+		log.WithContext(ctx).WithField("prefix", "onesignal").WithField("resp", string(dumpBytes)).Debug("response from onesignal")
 	}
 
-	log.WithContext(ctx).WithField("prefix", "onesignal").WithField("resp", string(dumpBytes)).Debug("response from onesignal")
-
-	// Decode response body to see what actually happened
 	decoder := json.NewDecoder(resp.Body)
 	var errBody OneSignalError
 	if err := decoder.Decode(&errBody); err != nil {

@@ -37,6 +37,9 @@ type Server struct {
 	// Server instance
 	server *http.Server
 
+	// whether to enable trace mode
+	traceMode bool
+
 	// Stores
 	store      store.AutonomyCore
 	mongoStore store.MongoStore
@@ -82,6 +85,7 @@ func NewServer(
 	)
 
 	return &Server{
+		traceMode:       viper.GetBool("server.trace_mode"),
 		store:           store.NewAutonomyStore(ormDB, mongoStore),
 		mongoStore:      mongoStore,
 		jwtPrivateKey:   jwtKey,
@@ -111,6 +115,7 @@ func (s *Server) setupRouter() *gin.Engine {
 		WaitForDelivery: false,
 		Timeout:         10 * time.Second,
 	}))
+	r.Use(s.DumpRequest)
 
 	webhookRoute := r.Group("/webhook")
 	webhookRoute.Use(logmodule.Ginrus("Webhook"))
