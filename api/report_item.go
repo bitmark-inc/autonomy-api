@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -245,5 +246,8 @@ func getReportItemsForDisplay(entries map[string]*reportItem, getNameFunc func(s
 		entry.Name = getNameFunc(entryID)
 		results = append(results, entry)
 	}
+	sort.SliceStable(results, func(i, j int) bool {
+		return *results[i].Value > *results[j].Value
+	})
 	return results
 }
