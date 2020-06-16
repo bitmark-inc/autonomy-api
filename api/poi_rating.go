@@ -52,13 +52,19 @@ func (s *Server) updatePOIRating(c *gin.Context) {
 		return
 	}
 
+	poiResources, err := s.mongoStore.GetPOIResourceMetric(poiID)
+	if err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+	resourceNames := make(map[string]string)
+	for _, r := range poiResources.Resources {
+		resourceNames[r.ID] = r.Name
+	}
+
 	var profileMetric schema.ProfileRatingsMetric
 	for _, r := range body.Ratings {
-
-		name, resovErr := store.ResolveResourceNameByID(r.Resource.ID, params.Language)
-		if resovErr != nil || "" == name { // show original name
-			c.Error(fmt.Errorf("resovError:%v", resovErr))
-		}
+		name := resourceNames[r.Resource.ID]
 
 		if r.Score > 0 { // score zero means unrated, score cant be zero
 			rating := schema.RatingResource{
@@ -86,7 +92,7 @@ func (s *Server) updatePOIRating(c *gin.Context) {
 func (s *Server) getProfileRatings(c *gin.Context) {
 	account, ok := c.MustGet("account").(*schema.Account)
 	if !ok {
-		c.Error(fmt.Errorf("Can not get account nnumber"))
+		c.Error(fmt.Errorf("Can not get account number"))
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer)
 		return
 	}
@@ -140,11 +146,20 @@ func (s *Server) getProfileRatings(c *gin.Context) {
 		params.Language = "en"
 	}
 
+	poiResources, err := s.mongoStore.GetPOIResourceMetric(poiObj)
+	if err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+	resourceNames := make(map[string]string)
+	for _, r := range poiResources.Resources {
+		resourceNames[r.ID] = r.Name
+	}
+
 	for i, r := range metric.Resources {
-		name, resovErr := store.ResolveResourceNameByID(r.ID, params.Language)
-		if resovErr != nil || "" == name {
-			c.Error(fmt.Errorf("resoveResourceNameByIDError:%v", resovErr))
-			continue
+		name, _ := store.ResolveResourceNameByID(r.ID, params.Language)
+		if "" == name { // show original name
+			name = resourceNames[r.ID]
 		}
 		metric.Resources[i].Name = name
 	}
