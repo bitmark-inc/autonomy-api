@@ -196,7 +196,7 @@ func (s *Server) placeProfile(c *gin.Context) {
 		}
 	}
 	sort.SliceStable(resources, func(i, j int) bool {
-		return resources[i].Score > resources[j].Score // Inverse sort
+		return resources[i].Ratings > resources[j].Ratings // Inverse sort
 	})
 	// metric
 	metric, err := s.mongoStore.SyncAccountPOIMetrics(accountNumber, profile.ScoreCoefficient, poiID)
