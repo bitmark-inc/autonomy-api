@@ -67,9 +67,6 @@ func (s *ScoreUpdateWorker) CalculatePOIStateActivity(ctx context.Context, id st
 		return nil, err
 	}
 	metric := score.CalculateMetric(*rawMetrics, nil)
-	if err := s.mongo.AddScoreRecord(id, schema.ScoreRecordTypePOI, metric.Score, time.Now().UTC().Unix()); err != nil {
-		sentry.CaptureException(err)
-	}
 
 	return &metric, nil
 }
@@ -102,8 +99,22 @@ func (s *ScoreUpdateWorker) RefreshLocationStateActivity(ctx context.Context, ac
 			return nil, err
 		}
 
+		resourceMetric, err := s.mongo.GetPOIResourceMetric(id)
+		if err != nil {
+			return nil, err
+		}
+		// TODO: refactor
+		// this overrides the original score in the metric struct and it'll be saved back to database as autonomy score
+		autonomyScore, autonomyScoreYesterday, _ := score.CalculatePOIAutonomyScore(resourceMetric.Resources, metric)
+		metric.Score = autonomyScore
+		metric.ScoreYesterday = autonomyScoreYesterday
+
 		if err := s.mongo.UpdatePOIMetric(id, metric); err != nil {
 			return nil, err
+		}
+
+		if err := s.mongo.AddScoreRecord(poiID, schema.ScoreRecordTypePOI, metric.Score, time.Now().UTC().Unix()); err != nil {
+			sentry.CaptureException(err)
 		}
 
 		profiles, err := s.mongo.GetProfilesByPOI(poiID)
@@ -112,7 +123,7 @@ func (s *ScoreUpdateWorker) RefreshLocationStateActivity(ctx context.Context, ac
 		}
 
 		// Since metric is used by all profile, we make a deep copy of metric to
-		// prvent it from mutating by calculation
+		// prevent it from mutating by calculation
 		b, err := msgpack.Marshal(metric)
 		if err != nil {
 			return nil, err
@@ -131,10 +142,6 @@ func (s *ScoreUpdateWorker) RefreshLocationStateActivity(ctx context.Context, ac
 
 			accountNow := time.Now().In(accountLocation)
 			accountToday := time.Date(accountNow.Year(), accountNow.Month(), accountNow.Day(), 0, 0, 0, 0, accountLocation)
-
-			if profile.ScoreCoefficient != nil {
-				metric.Score = score.TotalScoreV1(*profile.ScoreCoefficient, metric.Details.Symptoms.Score, metric.Details.Behaviors.Score, metric.Details.Confirm.Score)
-			}
 
 			if err := s.mongo.UpdateProfilePOIMetric(profile.AccountNumber, id, metric); err != nil {
 				return nil, err
@@ -286,6 +293,8 @@ func (s *ScoreUpdateWorker) CalculateAccountStateActivity(ctx context.Context, a
 
 	metric := score.CalculateMetric(*rawMetrics, profile.ScoreCoefficient)
 
+	// FIXME: `profile.IndividualMetric` could be outdated
+	// for users who don't use the app for a long time
 	score, _ := score.CalculateIndividualAutonomyScore(profile.IndividualMetric, metric)
 	if err := s.mongo.AddScoreRecord(accountNumber, schema.ScoreRecordTypeIndividual, score, time.Now().UTC().Unix()); err != nil {
 		sentry.CaptureException(err)

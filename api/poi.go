@@ -76,10 +76,6 @@ func (s *Server) getPOI(c *gin.Context) {
 	}
 
 	pois, err := s.mongoStore.ListPOI(account.AccountNumber)
-	for idx, p := range pois {
-		pois[idx].Score = p.Metric.AutonomyScore
-	}
-
 	if err != nil {
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 		return
