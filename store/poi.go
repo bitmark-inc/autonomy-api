@@ -105,6 +105,10 @@ func ResolveResourceNameByID(id, lang string) (string, error) {
 func getResourceList(lang string) ([]schema.Resource, error) {
 	lang = strings.ReplaceAll(strings.ToLower(lang), "-", "_")
 
+	if lang == "zh" {
+		lang = "zh_tw"
+	}
+
 	list, ok := defaultResourceList[lang]
 	if !ok {
 		list = defaultResourceList["en"]
