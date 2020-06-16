@@ -29,6 +29,7 @@ var (
 	ErrPOIListNotFound      = fmt.Errorf("poi list not found")
 	ErrPOIListMismatch      = fmt.Errorf("poi list mismatch")
 	ErrProfileNotUpdate     = fmt.Errorf("poi not update")
+	ErrEmptyPOIResourceName = fmt.Errorf("empty poi resource name")
 )
 
 // DefaultResourceCount is the total number of list in the translation list

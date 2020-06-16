@@ -206,6 +206,10 @@ func (s *Server) addPOIResources(c *gin.Context) {
 		addedResources = append(addedResources, schema.Resource{ID: id})
 	}
 	for _, name := range params.NewResourceNames {
+		if name == "" {
+			abortWithEncoding(c, http.StatusBadRequest, errorEmptyPOIResourceName)
+			return
+		}
 		addedResources = append(addedResources, schema.Resource{Name: name})
 	}
 

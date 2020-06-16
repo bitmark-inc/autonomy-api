@@ -30,7 +30,7 @@ var (
 
 		1300: store.ErrPOIListNotFound.Error(),
 		1301: store.ErrPOIListMismatch.Error(),
-		1303: store.ErrProfileNotUpdate.Error(),
+		1302: store.ErrEmptyPOIResourceName.Error(),
 	}
 
 	errorInternalServer             = errorJSON(999)
@@ -56,9 +56,9 @@ var (
 	errorRequestNotExist     = errorJSON(1200)
 	errorMultipleRequestMade = errorJSON(1201)
 
-	errorPOIListNotFound  = errorJSON(1300)
-	errorPOIListMissmatch = errorJSON(1301)
-	errorProfileNotUpdate = errorJSON(1302)
+	errorPOIListNotFound      = errorJSON(1300)
+	errorPOIListMissmatch     = errorJSON(1301)
+	errorEmptyPOIResourceName = errorJSON(1303)
 )
 
 type ErrorResponse struct {
