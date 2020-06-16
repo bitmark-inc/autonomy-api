@@ -29,31 +29,6 @@ func (s *Server) autonomyProfile(c *gin.Context) {
 	s.placeProfile(c)
 }
 
-func (s *Server) singleAreaProfile(c *gin.Context) {
-	accountNumber := c.GetString("requester")
-
-	profile, err := s.mongoStore.GetProfile(accountNumber)
-	if err != nil {
-		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-		return
-	}
-
-	poiID, err := primitive.ObjectIDFromHex(c.Param("poiID"))
-	if err != nil {
-		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, fmt.Errorf("invalid POI ID"))
-		return
-	}
-
-	metric, err := s.mongoStore.SyncAccountPOIMetrics(accountNumber, profile.ScoreCoefficient, poiID)
-	if err != nil {
-		c.Error(err)
-		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, metric)
-}
-
 func (s *Server) currentAreaProfile(c *gin.Context) {
 	account, ok := c.MustGet("account").(*schema.Account)
 	if !ok {

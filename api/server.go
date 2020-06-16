@@ -211,13 +211,6 @@ func (s *Server) setupRouter() *gin.Engine {
 		autonomyProfile.GET("/:poiID", s.autonomyProfile)
 	}
 
-	areaProfile := apiRoute.Group("/area_profile")
-	areaProfile.Use(s.recognizeAccountMiddleware())
-	{
-		areaProfile.GET("/", s.currentAreaProfile)
-		areaProfile.GET("/:poiID", s.singleAreaProfile)
-	}
-
 	apiRoute.POST("/scores", s.calculateScore)
 
 	r.GET("/healthz", s.healthz)
