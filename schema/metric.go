@@ -51,16 +51,14 @@ type IndividualMetric struct {
 }
 
 type Metric struct {
-	ConfirmedCount         float64 `json:"confirm" bson:"confirm"`
-	ConfirmedDelta         float64 `json:"confirm_delta" bson:"confirm_delta"`
-	SymptomCount           float64 `json:"symptom" bson:"symptoms"`
-	SymptomDelta           float64 `json:"symptom_delta" bson:"symptoms_delta"`
-	BehaviorCount          float64 `json:"behavior" bson:"behavior"`
-	BehaviorDelta          float64 `json:"behavior_delta" bson:"behavior_delta"`
-	Score                  float64 `json:"score" bson:"score"`
-	ScoreYesterday         float64 `json:"score_yesterday" bson:"score_yesterday"`
-	AutonomyScore          float64 `json:"autonomy_score" bson:"autonomy_score"`
-	AutonomyScoreYesterday float64 `json:"autonomy_score_yesterday" bson:"autonomy_score_yesterday"`
-	LastUpdate             int64   `json:"last_update" bson:"last_update"`
-	Details                Details `json:"details" bson:"details"`
+	ConfirmedCount float64 `json:"confirm" bson:"confirm"`
+	ConfirmedDelta float64 `json:"confirm_delta" bson:"confirm_delta"`
+	SymptomCount   float64 `json:"symptom" bson:"symptoms"`
+	SymptomDelta   float64 `json:"symptom_delta" bson:"symptoms_delta"`
+	BehaviorCount  float64 `json:"behavior" bson:"behavior"`
+	BehaviorDelta  float64 `json:"behavior_delta" bson:"behavior_delta"`
+	Score          float64 `json:"-" bson:"score"`
+	ScoreYesterday float64 `json:"-" bson:"score_yesterday"`
+	LastUpdate     int64   `json:"-" bson:"last_update"`
+	Details        Details `json:"-" bson:"details"`
 }

@@ -107,15 +107,6 @@ func (ts *ScoreActivityTestSuite) TestCalculatePOIStateActivity() {
 			Longitude: regularPOI.Location.Coordinates[0],
 		})).
 		Return(&schema.Metric{}, nil)
-	ts.mongoMock.
-		EXPECT().
-		AddScoreRecord(
-			gomock.Eq(ts.testPOIID),
-			schema.ScoreRecordTypePOI,
-			gomock.Eq(25.0), // symptom = 100, behavior = 0, case = 0
-			gomock.AssignableToTypeOf(int64(1)),
-		).
-		Return(nil)
 
 	values, err := ts.env.ExecuteActivity(ts.worker.CalculatePOIStateActivity, ts.testPOIID)
 	ts.NoError(err)
@@ -581,10 +572,24 @@ func (ts *ScoreActivityTestSuite) TestRefreshLocationStateActivityForPOINormalRu
 				},
 			},
 		}, nil)
-
+	ts.mongoMock.
+		EXPECT().
+		GetPOIResourceMetric(
+			gomock.Eq(poiID),
+		).
+		Return(schema.POIRatingsMetric{}, nil)
 	ts.mongoMock.
 		EXPECT().
 		UpdateProfilePOIMetric(gomock.Eq(ts.testAccountNumber), gomock.Eq(poiID), gomock.AssignableToTypeOf(schema.Metric{})).
+		Return(nil)
+	ts.mongoMock.
+		EXPECT().
+		AddScoreRecord(
+			gomock.Eq(ts.testPOIID),
+			schema.ScoreRecordTypePOI,
+			gomock.AssignableToTypeOf(float64(1)),
+			gomock.AssignableToTypeOf(int64(1)),
+		).
 		Return(nil)
 
 	values, err := ts.env.ExecuteActivity(ts.worker.RefreshLocationStateActivity, "", ts.testPOIID, schema.Metric{})
@@ -670,11 +675,25 @@ func (ts *ScoreActivityTestSuite) TestRefreshLocationStateActivityForPOILastSymp
 				},
 			},
 		}, nil)
-
+	ts.mongoMock.
+		EXPECT().
+		GetPOIResourceMetric(
+			gomock.Eq(poiID),
+		).
+		Return(schema.POIRatingsMetric{Resources: []schema.POIResourceRating{{SumOfScore: 5, Score: 5, Ratings: 1}}}, nil)
 	ts.mongoMock.
 		EXPECT().
 		UpdateProfilePOIMetric(gomock.AssignableToTypeOf(""), gomock.Eq(poiID), gomock.AssignableToTypeOf(schema.Metric{})).
 		Return(nil).Times(2)
+	ts.mongoMock.
+		EXPECT().
+		AddScoreRecord(
+			gomock.Eq(ts.testPOIID),
+			schema.ScoreRecordTypePOI,
+			gomock.AssignableToTypeOf(float64(1)),
+			gomock.AssignableToTypeOf(int64(1)),
+		).
+		Return(nil)
 
 	values, err := ts.env.ExecuteActivity(ts.worker.RefreshLocationStateActivity, "", ts.testPOIID, metricToUpdate)
 	ts.NoError(err)
@@ -764,6 +783,21 @@ func (ts *ScoreActivityTestSuite) TestRefreshLocationStateActivityForPOILastSymp
 		EXPECT().
 		UpdateProfilePOIMetric(gomock.AssignableToTypeOf(""), gomock.Eq(poiID), gomock.AssignableToTypeOf(schema.Metric{})).
 		Return(nil).Times(2)
+	ts.mongoMock.
+		EXPECT().
+		GetPOIResourceMetric(
+			gomock.Eq(poiID),
+		).
+		Return(schema.POIRatingsMetric{Resources: []schema.POIResourceRating{{SumOfScore: 5, Score: 5, Ratings: 1}}}, nil)
+	ts.mongoMock.
+		EXPECT().
+		AddScoreRecord(
+			gomock.Eq(ts.testPOIID),
+			schema.ScoreRecordTypePOI,
+			gomock.AssignableToTypeOf(float64(1)),
+			gomock.AssignableToTypeOf(int64(1)),
+		).
+		Return(nil)
 
 	values, err := ts.env.ExecuteActivity(ts.worker.RefreshLocationStateActivity, "", ts.testPOIID, metricToUpdate)
 	ts.NoError(err)
@@ -823,6 +857,21 @@ func (ts *ScoreActivityTestSuite) TestRefreshLocationStateActivityForPOILastStat
 		EXPECT().
 		UpdateProfilePOIMetric(gomock.AssignableToTypeOf(""), gomock.Eq(poiID), gomock.AssignableToTypeOf(schema.Metric{})).
 		Return(nil).Times(2)
+	ts.mongoMock.
+		EXPECT().
+		GetPOIResourceMetric(
+			gomock.Eq(poiID),
+		).
+		Return(schema.POIRatingsMetric{Resources: []schema.POIResourceRating{{SumOfScore: 5, Score: 5, Ratings: 1}}}, nil)
+	ts.mongoMock.
+		EXPECT().
+		AddScoreRecord(
+			gomock.Eq(ts.testPOIID),
+			schema.ScoreRecordTypePOI,
+			gomock.AssignableToTypeOf(float64(1)),
+			gomock.AssignableToTypeOf(int64(1)),
+		).
+		Return(nil)
 
 	values, err := ts.env.ExecuteActivity(ts.worker.RefreshLocationStateActivity, "", ts.testPOIID, metricToUpdate)
 	ts.NoError(err)
