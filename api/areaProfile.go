@@ -11,6 +11,7 @@ import (
 
 	"github.com/bitmark-inc/autonomy-api/schema"
 	"github.com/bitmark-inc/autonomy-api/score"
+	"github.com/bitmark-inc/autonomy-api/store"
 )
 
 const (
@@ -195,6 +196,15 @@ func (s *Server) placeProfile(c *gin.Context) {
 			resp.HasMoreResource = true
 		}
 	}
+
+	for i, r := range resources {
+		name, _ := store.ResolveResourceNameByID(r.ID, params.Language)
+		if "" == name { // show original name
+			name = r.Name
+		}
+		resources[i].Name = name
+	}
+
 	sort.SliceStable(resources, func(i, j int) bool {
 		return resources[i].Ratings > resources[j].Ratings // Inverse sort
 	})
