@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/bitmark-inc/autonomy-api/schema"
-	"gopkg.in/go-playground/assert.v1"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestResourceScoreFirstRating(t *testing.T) {
