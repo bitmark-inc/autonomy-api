@@ -23,12 +23,9 @@ Mac: `brew install gdal`
 
 ### World Country Boundary
 
-1.Download [open data](https://hub.arcgis.com/datasets/252471276c9941729543be8789e06e12_0)
-2. Unzip it. There will be a SHP file **World_Countries__Generalized_.shp** (file name might be changed in the future)
-3. Use `ogr2ogr` to convert it into geojson with WGS84 coordinates (regular latitude and longitude):
-    ```
-    ogr2ogr -f "GeoJSON" -t_srs EPSG:4326 world-boundary.json World_Countries__Generalized_.shp
-    ```
+1. Select countries and download geojson from [open data](https://geojson-maps.ash.ms/)
+2. There will be some points that have longitude slightly greater than 180 which is not allowed. Please change it to 180.
+   For example: from `180.00000000000017` to `180`
 
 ### US Boundary
 

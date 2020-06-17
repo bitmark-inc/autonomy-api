@@ -132,29 +132,34 @@ func ImportWorldCountryBoundary(client *mongo.Client, dbName, geoJSONFile string
 		return err
 	}
 
-	var boundaries []interface{}
+	ctx := context.Background()
 	for _, b := range result.Features {
-		country, ok := b.Properties["COUNTRYAFF"].(string)
+		country, ok := b.Properties["sovereignt"].(string)
 		if !ok {
-			return fmt.Errorf("invalid country value, %+v", b.Properties["COUNTRYAFF"])
+			continue
 		}
 
-		island, ok := b.Properties["COUNTRY"].(string)
-		if !ok {
-			return fmt.Errorf("invalid island value, %+v", b.Properties["COUNTRY"])
+		switch country {
+		case "United States of America", "Taiwan":
+			continue
 		}
 
-		boundaries = append(boundaries, schema.Boundary{
+		island, ok := b.Properties["geounit"].(string)
+		if !ok {
+			return fmt.Errorf("invalid island value, %+v", b.Properties["geounit"])
+		}
+
+		boundary := schema.Boundary{
 			Country:  country,
 			Island:   island,
 			State:    "",
 			County:   "",
 			Geometry: b.Geometry,
-		})
-	}
+		}
 
-	if _, err := client.Database(dbName).Collection(schema.BoundaryCollection).InsertMany(context.Background(), boundaries); err != nil {
-		return err
+		if _, err := client.Database(dbName).Collection(schema.BoundaryCollection).InsertOne(ctx, boundary); err != nil {
+			fmt.Printf("country: %s, island: %s, err: %s\n", country, island, err.Error())
+		}
 	}
 
 	return nil

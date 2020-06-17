@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"googlemaps.github.io/maps"
@@ -16,6 +17,7 @@ import (
 
 type ResolverTestSuite struct {
 	suite.Suite
+	reloadDB     bool
 	connURI      string
 	testDBName   string
 	mapAPIKey    string
@@ -45,12 +47,14 @@ var USLocationTestData = []schema.Location{
 var OtherLocationTestData = []schema.Location{
 	{Latitude: 64.1499893, Longitude: -21.954031, AddressComponent: schema.AddressComponent{Country: "Iceland", State: "", County: ""}},
 	{Latitude: 16.056142, Longitude: 108.200845, AddressComponent: schema.AddressComponent{Country: "Vietnam", State: "", County: ""}},
+	{Latitude: 16.043864, Longitude: 108.217694, AddressComponent: schema.AddressComponent{Country: "Vietnam", State: "", County: ""}},
 	{Latitude: 35.6599743, Longitude: 139.7432433, AddressComponent: schema.AddressComponent{Country: "Japan", State: "", County: ""}},
 	{Latitude: 49.0096941, Longitude: 2.5457358, AddressComponent: schema.AddressComponent{Country: "France", State: "", County: ""}},
 }
 
-func NewResolverTestSuite(connURI, dbName, mapAPIKey string) *ResolverTestSuite {
+func NewResolverTestSuite(connURI, dbName, mapAPIKey string, reloadDB bool) *ResolverTestSuite {
 	return &ResolverTestSuite{
+		reloadDB:   reloadDB,
 		connURI:    connURI,
 		testDBName: dbName,
 		mapAPIKey:  mapAPIKey,
@@ -83,13 +87,21 @@ func (s *ResolverTestSuite) SetupSuite() {
 	s.mongoClient = mongoClient
 	s.testDatabase = mongoClient.Database(s.testDBName)
 
-	// make sure the test suite is run with a clean environment
-	if err := s.CleanMongoDB(); err != nil {
+	n, err := s.testDatabase.Collection("boundary").CountDocuments(context.Background(), bson.M{})
+	if err != nil {
 		s.T().Fatal(err)
 	}
-	schema.NewMongoDBIndexer(s.connURI, s.testDBName).IndexAll()
-	if err := s.LoadMongoDBFixtures(); err != nil {
-		s.T().Fatal(err)
+
+	// The boundary data is large. Therefore, we only load the data if
+	// the `RELOAD_DB` is set or there is no items in the collection.
+	if s.reloadDB || n == 0 {
+		if err := s.CleanMongoDB(); err != nil {
+			s.T().Fatal(err)
+		}
+		schema.NewMongoDBIndexer(s.connURI, s.testDBName).IndexAll()
+		if err := s.LoadMongoDBFixtures(); err != nil {
+			s.T().Fatal(err)
+		}
 	}
 }
 
@@ -102,7 +114,7 @@ func (s *ResolverTestSuite) LoadMongoDBFixtures() error {
 		return err
 	}
 
-	return geojson.ImportWorldCountryBoundary(s.mongoClient, s.testDBName, "../share/geojson/world-boundary.json")
+	return geojson.ImportWorldCountryBoundary(s.mongoClient, s.testDBName, "../share/geojson/world-boundary.geojson")
 }
 
 func (s *ResolverTestSuite) CleanMongoDB() error {
@@ -329,5 +341,6 @@ func (s *ResolverTestSuite) TestMultipleLocationResolverMongodbNotFound() {
 // a normal test function and pass our suite to s.Run
 func TestResolverTestSuite(t *testing.T) {
 	mapKey := os.Getenv("MAP_APIKEY")
-	suite.Run(t, NewResolverTestSuite("mongodb://127.0.0.1:27017/?compressors=disabled", "test-geo", mapKey))
+	reloadDB := os.Getenv("RELOAD_DB") != ""
+	suite.Run(t, NewResolverTestSuite("mongodb://127.0.0.1:27017/?compressors=disabled", "test-geo", mapKey, reloadDB))
 }

@@ -34,7 +34,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := geojson.ImportWorldCountryBoundary(client, dbName, "world-boundary.json"); err != nil {
+	if err := geojson.ImportWorldCountryBoundary(client, dbName, "world-boundary.geojson"); err != nil {
 		panic(err)
 	}
 

@@ -20,5 +20,5 @@ func (s *ResolverTestSuite) TestMongodbDataSource() {
 
 	country, err := s.testDatabase.Collection("boundary").Distinct(ctx, "country", bson.M{})
 	s.NoError(err)
-	s.Len(country, 198)
+	s.Len(country, 202)
 }
