@@ -161,23 +161,27 @@ func (s *Server) placeProfile(c *gin.Context) {
 	}
 
 	resources := poi.ResourceRatings.Resources
-	sort.SliceStable(resources, func(i, j int) bool {
-		return resources[i].Ratings > resources[j].Ratings // Inverse sort
-	})
+	if len(resources) == 0 {
+		resources = []schema.POIResourceRating{}
+	} else {
+		sort.SliceStable(resources, func(i, j int) bool {
+			return resources[i].Ratings > resources[j].Ratings // Inverse sort
+		})
 
-	if !params.AllResources { // return 10 records and indicate more or not
-		if len(resources) > 10 {
-			resources = resources[:10]
-			resp.HasMoreResource = true
+		if !params.AllResources { // return 10 records and indicate more or not
+			if len(resources) > 10 {
+				resources = resources[:10]
+				resp.HasMoreResource = true
+			}
 		}
-	}
 
-	for i, r := range resources {
-		name, _ := store.ResolveResourceNameByID(r.ID, params.Language)
-		if "" == name { // show original name
-			name = r.Name
+		for i, r := range resources {
+			name, _ := store.ResolveResourceNameByID(r.ID, params.Language)
+			if "" == name { // show original name
+				name = r.Name
+			}
+			resources[i].Name = name
 		}
-		resources[i].Name = name
 	}
 
 	resp.ID = poi.ID.Hex()
