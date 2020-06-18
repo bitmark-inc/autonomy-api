@@ -21,7 +21,7 @@ type Metric interface {
 	SyncProfileIndividualMetrics(profileID string) (*schema.IndividualMetric, error)
 	SyncAccountMetrics(accountNumber string, coefficient *schema.ScoreCoefficient, location schema.Location) (*schema.Metric, error)
 	SyncAccountPOIMetrics(accountNumber string, coefficient *schema.ScoreCoefficient, poiID primitive.ObjectID) (*schema.Metric, error)
-	SyncPOIMetrics(poiID primitive.ObjectID, location schema.Location) (*schema.Metric, error)
+	SyncPOIMetrics(poiID primitive.ObjectID, resourceRating []schema.POIResourceRating, location schema.Location) (*schema.Metric, error)
 }
 
 // CollectRawMetrics will gather data from various of sources that is required to
@@ -250,6 +250,7 @@ func (m *mongoDB) SyncAccountPOIMetrics(accountNumber string, coefficient *schem
 			}).Debug("collect raw metrics")
 
 			metric := score.CalculateMetric(*rawMetrics, coefficient)
+
 			if err := m.UpdateProfilePOIMetric(accountNumber, poiID, metric); err != nil {
 				return nil, err
 			}
@@ -260,7 +261,8 @@ func (m *mongoDB) SyncAccountPOIMetrics(accountNumber string, coefficient *schem
 	return nil, ErrPOINotFound
 }
 
-func (m *mongoDB) SyncPOIMetrics(poiID primitive.ObjectID, location schema.Location) (*schema.Metric, error) {
+// FIXME: should not update autonomy score when syncing metrics
+func (m *mongoDB) SyncPOIMetrics(poiID primitive.ObjectID, resourceRating []schema.POIResourceRating, location schema.Location) (*schema.Metric, error) {
 	rawMetrics, err := m.CollectRawMetrics(location)
 	if err != nil {
 		return nil, err
@@ -270,7 +272,10 @@ func (m *mongoDB) SyncPOIMetrics(poiID primitive.ObjectID, location schema.Locat
 	if err != nil {
 		return nil, err
 	}
-	if err := m.UpdatePOIMetric(poiID, metric); err != nil {
+
+	autonomyScore, _, autonomyScoreDelta := score.CalculatePOIAutonomyScore(resourceRating, metric)
+
+	if err := m.UpdatePOIMetric(poiID, metric, autonomyScore, autonomyScoreDelta); err != nil {
 		return nil, err
 	}
 

@@ -114,7 +114,7 @@ func (s *Server) poiDebugData(c *gin.Context) {
 		metricLastUpdate := time.Unix(metric.LastUpdate, 0)
 		if time.Since(metricLastUpdate) >= metricUpdateInterval {
 			m, err :=
-				s.mongoStore.SyncPOIMetrics(poiID, loc)
+				s.mongoStore.SyncPOIMetrics(poiID, poi.ResourceRatings.Resources, loc)
 			if err != nil {
 				c.Error(err)
 				abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)

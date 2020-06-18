@@ -13,7 +13,8 @@ const (
 type POI struct {
 	ID              primitive.ObjectID `bson:"_id"`
 	Location        *GeoJSON           `bson:"location"`
-	Score           float64            `bson:"score"`
+	Score           float64            `bson:"autonomy_score"`
+	ScoreDelta      float64            `bson:"autonomy_score_delta"`
 	Metric          Metric             `bson:"metric"`
 	Country         string             `bson:"country" json:"-"`
 	State           string             `bson:"state" json:"-"`

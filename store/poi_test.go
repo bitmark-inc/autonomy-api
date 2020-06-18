@@ -24,6 +24,7 @@ import (
 	"github.com/bitmark-inc/autonomy-api/utils"
 )
 
+var updatePOIID = primitive.NewObjectID()
 var addedPOIID = primitive.NewObjectID()
 var addedPOIID2 = primitive.NewObjectID()
 var existedPOIID = primitive.NewObjectID()
@@ -54,6 +55,18 @@ var (
 			Type:        "Point",
 			Coordinates: []float64{-73.98697609999999, 40.7385105},
 		},
+		PlaceType: "unknown",
+	}
+
+	updatePOI = schema.POI{
+		ID: updatePOIID,
+		Location: &schema.GeoJSON{
+			Type:        "Point",
+			Coordinates: []float64{119, 24},
+		},
+		Country:   "Taiwan",
+		State:     "",
+		County:    "Yilan County",
 		PlaceType: "unknown",
 	}
 
@@ -284,6 +297,7 @@ func (s *POITestSuite) LoadMongoDBFixtures() error {
 
 	if _, err := s.testDatabase.Collection(schema.POICollection).InsertMany(ctx, []interface{}{
 		noCountryPOI,
+		updatePOI,
 		addedPOI,
 		addedPOI2,
 		existedPOI,
@@ -622,6 +636,27 @@ func (s *POITestSuite) TestUpdatePOIAliasFromNonexistentAccount() {
 func (s *POITestSuite) TestUpdatePOIAliasForNotAddedPOI() {
 	store := NewMongoStore(s.mongoClient, s.testDBName)
 	s.EqualError(store.UpdatePOIAlias("account-test-update-poi-alias", "new-poi-alias", addedPOIID2), ErrPOINotFound.Error())
+}
+
+func (s *POITestSuite) TestUpdatePOIMetric() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+
+	var poi schema.POI
+	// before
+	err := s.testDatabase.Collection(schema.POICollection).FindOne(context.Background(), bson.M{"_id": updatePOIID}).Decode(&poi)
+	s.NoError(err)
+	s.Equal(poi.Metric.Score, 0.0)
+	s.Equal(poi.Score, 0.0)
+	s.Equal(poi.ScoreDelta, 0.0)
+
+	s.NoError(store.UpdatePOIMetric(updatePOIID, schema.Metric{Score: 55.66}, 94.87, 94.0))
+
+	// after
+	err = s.testDatabase.Collection(schema.POICollection).FindOne(context.Background(), bson.M{"_id": updatePOIID}).Decode(&poi)
+	s.NoError(err)
+	s.Equal(poi.Metric.Score, 55.66)
+	s.Equal(poi.Score, 94.87)
+	s.Equal(poi.ScoreDelta, 94.0)
 }
 
 func (s *POITestSuite) TestAddPOIResources() {

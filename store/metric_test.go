@@ -7,10 +7,30 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/bitmark-inc/autonomy-api/schema"
+)
+
+var (
+	testMetricPOIID         = primitive.NewObjectID()
+	testMetricNoRatingPOIID = primitive.NewObjectID()
+)
+
+var (
+	testMetricPOI = schema.POI{
+		ID:        testMetricPOIID,
+		Location:  &locationNangangTrainStation,
+		PlaceType: "unknown",
+	}
+
+	testMetricNoRatingPOI = schema.POI{
+		ID:        testMetricNoRatingPOIID,
+		Location:  &locationNangangTrainStation,
+		PlaceType: "unknown",
+	}
 )
 
 var (
@@ -130,6 +150,13 @@ func (s *MetricTestSuite) LoadMongoDBFixtures() error {
 		return err
 	}
 
+	if _, err := s.testDatabase.Collection(schema.POICollection).InsertMany(ctx, []interface{}{
+		testMetricPOI,
+		testMetricNoRatingPOI,
+	}); err != nil {
+		s.T().Fatal(err)
+	}
+
 	if _, err := s.testDatabase.Collection(schema.SymptomReportCollection).InsertMany(ctx, []interface{}{
 		metricTestSymptomReport1,
 		metricTestSymptomReport2,
@@ -200,6 +227,81 @@ func (s *MetricTestSuite) TestSyncProfileIndividualMetricsWithoutData() {
 	s.Equal(profile.IndividualMetric.SymptomDelta, m.SymptomDelta)
 	s.Equal(profile.IndividualMetric.BehaviorCount, m.BehaviorCount)
 	s.Equal(profile.IndividualMetric.BehaviorDelta, m.BehaviorDelta)
+}
+
+// TestSyncPOIMetrics tests if data saves into mongodb
+func (s *MetricTestSuite) TestSyncPOIMetrics() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+
+	resourceRating := []schema.POIResourceRating{
+		{
+			Resource: schema.Resource{
+				ID: "123",
+			},
+			Score:   5,
+			Ratings: 1,
+		},
+		{
+			Resource: schema.Resource{
+				ID: "456",
+			},
+			Score:   5,
+			Ratings: 1,
+		},
+	}
+
+	var poiBefore schema.POI
+	err := s.testDatabase.Collection(schema.POICollection).FindOne(context.Background(), bson.M{
+		"_id": testMetricPOIID,
+	}).Decode(&poiBefore)
+	s.NoError(err)
+	s.Equal(poiBefore.Score, 0.0)
+
+	_, err = store.SyncPOIMetrics(testMetricPOIID, resourceRating, schema.Location{
+		AddressComponent: schema.AddressComponent{
+			Country: "Taiwan",
+		},
+		Longitude: locationNangangTrainStation.Coordinates[0],
+		Latitude:  locationNangangTrainStation.Coordinates[1],
+	})
+	s.NoError(err)
+
+	var poiAfter schema.POI
+	err = s.testDatabase.Collection(schema.POICollection).FindOne(context.Background(), bson.M{
+		"_id": testMetricPOIID,
+	}).Decode(&poiAfter)
+	s.NoError(err)
+	s.Equal(poiAfter.Score, 85.83333333333333)
+}
+
+// TestSyncPOIMetricsWihtoutRating tests if data saves into mongodb
+func (s *MetricTestSuite) TestSyncPOIMetricsWihtoutRating() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+
+	resourceRating := []schema.POIResourceRating{}
+
+	var poiBefore schema.POI
+	err := s.testDatabase.Collection(schema.POICollection).FindOne(context.Background(), bson.M{
+		"_id": testMetricNoRatingPOIID,
+	}).Decode(&poiBefore)
+	s.NoError(err)
+	s.Equal(poiBefore.Score, 0.0)
+
+	_, err = store.SyncPOIMetrics(testMetricPOIID, resourceRating, schema.Location{
+		AddressComponent: schema.AddressComponent{
+			Country: "Taiwan",
+		},
+		Longitude: locationNangangTrainStation.Coordinates[0],
+		Latitude:  locationNangangTrainStation.Coordinates[1],
+	})
+	s.NoError(err)
+
+	var poiAfter schema.POI
+	err = s.testDatabase.Collection(schema.POICollection).FindOne(context.Background(), bson.M{
+		"_id": testMetricPOIID,
+	}).Decode(&poiAfter)
+	s.NoError(err)
+	s.Equal(poiAfter.Score, 29.16666666666667)
 }
 
 func TestMetricTestSuite(t *testing.T) {

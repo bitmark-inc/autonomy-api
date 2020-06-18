@@ -117,7 +117,7 @@ func (s *Server) placeProfile(c *gin.Context) {
 	// resources
 	var params struct {
 		Language     string `form:"lang"`
-		AllReosurces bool   `form:"all_resources"`
+		AllResources bool   `form:"all_resources"`
 	}
 	if err := c.Bind(&params); err != nil {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
@@ -161,13 +161,13 @@ func (s *Server) placeProfile(c *gin.Context) {
 	}
 
 	resources := poi.ResourceRatings.Resources
-	if nil == resources {
-		resources = []schema.POIResourceRating{}
-	}
+	sort.SliceStable(resources, func(i, j int) bool {
+		return resources[i].Ratings > resources[j].Ratings // Inverse sort
+	})
 
-	if !params.AllReosurces { // return 10 records and indicate more or not
-		if len(poi.ResourceRatings.Resources) > 10 {
-			resources = poi.ResourceRatings.Resources[:10]
+	if !params.AllResources { // return 10 records and indicate more or not
+		if len(resources) > 10 {
+			resources = resources[:10]
 			resp.HasMoreResource = true
 		}
 	}
@@ -180,28 +180,16 @@ func (s *Server) placeProfile(c *gin.Context) {
 		resources[i].Name = name
 	}
 
-	sort.SliceStable(resources, func(i, j int) bool {
-		return resources[i].Ratings > resources[j].Ratings // Inverse sort
-	})
-	// metric
-	metric, err := s.mongoStore.SyncAccountPOIMetrics(accountNumber, profile.ScoreCoefficient, poiID)
-	if err != nil {
-		c.Error(err)
-		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-		return
-	}
-	score, _, delta := score.CalculatePOIAutonomyScore(resources, *metric)
 	resp.ID = poi.ID.Hex()
 	resp.Alias = profilePoi.Alias
 	resp.Address = profilePoi.Address
-	//resp.Location = poi.Location
 
 	if len(profilePoi.ResourceRatings.Resources) > 0 {
 		resp.Rating = true
 	}
-	resp.Score = score
-	resp.ScoreDelta = delta
-	resp.Metric = *metric
+	resp.Score = poi.Score
+	resp.ScoreDelta = poi.ScoreDelta
+	resp.Metric = poi.Metric
 	resp.Resources = resources
 
 	c.JSON(http.StatusOK, resp)

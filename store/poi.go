@@ -131,7 +131,7 @@ type POI interface {
 	GetPOI(poiID primitive.ObjectID) (*schema.POI, error)
 	GetPOIMetrics(poiID primitive.ObjectID) (*schema.Metric, error)
 	UpdatePOIGeoInfo(poiID primitive.ObjectID, location schema.Location) error
-	UpdatePOIMetric(poiID primitive.ObjectID, metric schema.Metric) error
+	UpdatePOIMetric(poiID primitive.ObjectID, metric schema.Metric, autonomyScore, autonomyScoreDelta float64) error
 
 	UpdatePOIAlias(accountNumber, alias string, poiID primitive.ObjectID) error
 	UpdatePOIOrder(accountNumber string, poiOrder []string) error
@@ -196,7 +196,7 @@ func (m *mongoDB) AddPOI(accountNumber string, alias, address, placeType string,
 	}
 
 	if time.Since(time.Unix(poi.Metric.LastUpdate, 0)) > metricUpdateInterval {
-		newMetric, err := m.SyncPOIMetrics(poi.ID, schema.Location{
+		newMetric, err := m.SyncPOIMetrics(poi.ID, poi.ResourceRatings.Resources, schema.Location{
 			Latitude:  lat,
 			Longitude: lon,
 			AddressComponent: schema.AddressComponent{
@@ -278,6 +278,7 @@ func (m *mongoDB) ListPOI(accountNumber string) ([]schema.POIDetail, error) {
 		return nil, fmt.Errorf("poi data wrongly retrieved or removed")
 	}
 	for i := range result.Points {
+		result.Points[i].Score = pois[i].Score
 		if l := pois[i].Location; l != nil {
 			result.Points[i].Location = &schema.Location{
 				Longitude: l.Coordinates[0],
@@ -526,7 +527,7 @@ func (m *mongoDB) UpdatePOIGeoInfo(poiID primitive.ObjectID, location schema.Loc
 	return nil
 }
 
-func (m *mongoDB) UpdatePOIMetric(poiID primitive.ObjectID, metric schema.Metric) error {
+func (m *mongoDB) UpdatePOIMetric(poiID primitive.ObjectID, metric schema.Metric, autonomyScore, autonomyScoreDelta float64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 
@@ -538,7 +539,9 @@ func (m *mongoDB) UpdatePOIMetric(poiID primitive.ObjectID, metric schema.Metric
 	metric.LastUpdate = time.Now().Unix()
 	update := bson.M{
 		"$set": bson.M{
-			"metric": metric,
+			"autonomy_score":       autonomyScore,
+			"autonomy_score_delta": autonomyScoreDelta,
+			"metric":               metric,
 		},
 	}
 

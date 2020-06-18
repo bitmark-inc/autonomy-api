@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/bitmark-inc/autonomy-api/schema"
 	"github.com/bitmark-inc/autonomy-api/score"
@@ -22,7 +23,7 @@ func (m *mongoDB) GetPOIResourceMetric(poiID primitive.ObjectID) (schema.POIRati
 		"_id": poiID,
 	}
 	var result schema.POI
-	err := c.FindOne(ctx, filter).Decode(&result)
+	err := c.FindOne(ctx, filter, options.FindOne().SetProjection(bson.M{"resource_ratings": 1})).Decode(&result)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"prefix": mongoLogPrefix,
@@ -38,7 +39,7 @@ func (m *mongoDB) UpdatePOIRatingMetric(accountNumber string, poiID primitive.Ob
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 	c := m.client.Database(m.database).Collection(schema.POICollection)
-	poiMetric, err := m.GetPOIResourceMetric(poiID)
+	poi, err := m.GetPOI(poiID)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"prefix": mongoLogPrefix,
@@ -47,6 +48,8 @@ func (m *mongoDB) UpdatePOIRatingMetric(accountNumber string, poiID primitive.Ob
 		}).Error("get poi fail")
 		return err
 	}
+
+	poiMetric := poi.ResourceRatings
 
 	profileMetric, err := m.GetProfilesRatingMetricByPOI(accountNumber, poiID)
 
@@ -112,6 +115,8 @@ func (m *mongoDB) UpdatePOIRatingMetric(accountNumber string, poiID primitive.Ob
 		poiRatings = append(poiRatings, r)
 	}
 
+	autonomyScore, _, autonomyScoreDelta := score.CalculatePOIAutonomyScore(poiRatings, poi.Metric)
+
 	query := bson.M{
 		"_id": poiID,
 	}
@@ -121,6 +126,8 @@ func (m *mongoDB) UpdatePOIRatingMetric(accountNumber string, poiID primitive.Ob
 				Resources:  poiRatings,
 				LastUpdate: now.Unix(),
 			},
+			"autonomy_score":       autonomyScore,
+			"autonomy_score_delta": autonomyScoreDelta,
 		},
 	}
 

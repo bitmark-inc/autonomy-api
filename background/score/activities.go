@@ -103,17 +103,14 @@ func (s *ScoreUpdateWorker) RefreshLocationStateActivity(ctx context.Context, ac
 		if err != nil {
 			return nil, err
 		}
-		// TODO: refactor
-		// this overrides the original score in the metric struct and it'll be saved back to database as autonomy score
-		autonomyScore, autonomyScoreYesterday, _ := score.CalculatePOIAutonomyScore(resourceMetric.Resources, metric)
-		metric.Score = autonomyScore
-		metric.ScoreYesterday = autonomyScoreYesterday
 
-		if err := s.mongo.UpdatePOIMetric(id, metric); err != nil {
+		autonomyScore, _, autonomyScoreDelta := score.CalculatePOIAutonomyScore(resourceMetric.Resources, metric)
+
+		if err := s.mongo.UpdatePOIMetric(id, metric, autonomyScore, autonomyScoreDelta); err != nil {
 			return nil, err
 		}
 
-		if err := s.mongo.AddScoreRecord(poiID, schema.ScoreRecordTypePOI, metric.Score, time.Now().UTC().Unix()); err != nil {
+		if err := s.mongo.AddScoreRecord(poiID, schema.ScoreRecordTypePOI, autonomyScore, time.Now().UTC().Unix()); err != nil {
 			sentry.CaptureException(err)
 		}
 

@@ -19,6 +19,11 @@ func CalculatePOIAutonomyScore(resources []schema.POIResourceRating, neighbor sc
 	sumOfRatingsYesterday := float64(0)
 	scoreToday := float64(0)
 	scoreYesterday := float64(0)
+
+	if len(resources) == 0 {
+		return neighbor.Score, neighbor.ScoreYesterday, ChangeRate(neighbor.Score, neighbor.ScoreYesterday)
+	}
+
 	for _, r := range resources {
 		if r.Score > 0 { // score = 0 means not rated
 			sumOfScoreToday = sumOfScoreToday + r.Score*float64(r.Ratings)
