@@ -807,6 +807,18 @@ func (s *POITestSuite) TestNearestPOIWithAPoint() {
 	s.Len(poiIDs, 1)
 }
 
+func (s *POITestSuite) TestGetResourceList() {
+	list, err := getResourceList("", false)
+	s.NoError(err)
+	s.Len(list, DefaultResourceCount)
+}
+
+func (s *POITestSuite) TestGetResourceListImportant() {
+	list, err := getResourceList("", true)
+	s.NoError(err)
+	s.Len(list, len(importantResourceID))
+}
+
 // In order for 'go test' to run this suite, we need to create
 // a normal test function and pass our suite to s.Run
 func TestPOITestSuite(t *testing.T) {

@@ -205,6 +205,13 @@ func (s *Server) setupRouter() *gin.Engine {
 		poiRoute.GET("/:poiID/resource-ratings", s.getProfileRatings)
 	}
 
+	// suggestion
+	resourceRoute := apiRoute.Group("/resources")
+	resourceRoute.Use(s.recognizeAccountMiddleware())
+	{
+		resourceRoute.GET("", s.listResources)
+	}
+
 	autonomyProfile := apiRoute.Group("/autonomy_profile")
 	autonomyProfile.Use(s.recognizeAccountMiddleware())
 	{

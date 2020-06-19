@@ -45,6 +45,7 @@ var importantResourceID = map[string]struct{}{
 }
 
 var defaultResourceList = map[string][]schema.Resource{}
+var defaultImportantResourceList = map[string][]schema.Resource{}
 var defaultResourceIDMap = map[string]map[string]string{}
 
 // LoadDefaultPOIResources loads resources from the tranlation list and cache it for later usage.
@@ -62,6 +63,7 @@ func LoadDefaultPOIResources(lang string) error {
 	localizer := utils.NewLocalizer(lang)
 	resourceIDMap := map[string]string{}
 	resources := make([]schema.Resource, DefaultResourceCount)
+	importantResources := make([]schema.Resource, 0, len(importantResourceID))
 	for i := 0; i < DefaultResourceCount; i++ {
 		id := fmt.Sprintf("resource_%d", i+1)
 		name, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: fmt.Sprintf("resources.%s.name", id)})
@@ -77,11 +79,13 @@ func LoadDefaultPOIResources(lang string) error {
 		// check if a resource is important
 		if _, ok := importantResourceID[id]; ok {
 			resources[i].Important = true
+			importantResources = append(importantResources, resources[i])
 		}
 
 		resourceIDMap[id] = name
 	}
 	defaultResourceList[lang] = resources
+	defaultImportantResourceList[lang] = importantResources
 	defaultResourceIDMap[lang] = resourceIDMap
 	return nil
 }
@@ -106,16 +110,21 @@ func ResolveResourceNameByID(id, lang string) (string, error) {
 }
 
 // getResourceList returns a list of resource list by language.
-func getResourceList(lang string) ([]schema.Resource, error) {
+func getResourceList(lang string, important bool) ([]schema.Resource, error) {
 	lang = strings.ReplaceAll(strings.ToLower(lang), "-", "_")
 
 	if lang == "zh" {
 		lang = "zh_tw"
 	}
 
-	list, ok := defaultResourceList[lang]
+	resourceList := defaultResourceList
+	if important {
+		resourceList = defaultImportantResourceList
+	}
+
+	list, ok := resourceList[lang]
 	if !ok {
-		list = defaultResourceList["en"]
+		list = resourceList["en"]
 		if len(list) == 0 {
 			return nil, ErrPOIResourcesNotFound
 		}
@@ -671,7 +680,7 @@ func (m *mongoDB) GetPOIResources(poiID primitive.ObjectID, importantOnly bool, 
 		ratedResource[r.ID] = struct{}{}
 	}
 
-	resources, err := getResourceList(lang)
+	resources, err := getResourceList(lang, false)
 	if err != nil {
 		return nil, err
 	}

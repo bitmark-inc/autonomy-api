@@ -30,6 +30,7 @@ type MongoStore interface {
 	Report
 	Guide
 	ScoreHistory
+	Suggestion
 }
 
 // Closer - close db connection

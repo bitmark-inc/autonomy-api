@@ -12,6 +12,7 @@ var (
 
 		1006: "invalid value of client version",
 		1007: "API for this client version has been discontinued",
+		1008: "resource is not supported",
 
 		1010: "invalid parameters",
 		1011: "cannot parse request",
@@ -40,6 +41,7 @@ var (
 	errorInvalidToken               = errorJSON(1003)
 	errorInvalidClientVersion       = errorJSON(1006)
 	errorUnsupportedClientVersion   = errorJSON(1007)
+	errorResourceNotSupport         = errorJSON(1008)
 
 	errorInvalidParameters  = errorJSON(1010)
 	errorCannotParseRequest = errorJSON(1011)
