@@ -3,8 +3,9 @@ package score
 import (
 	"testing"
 
-	"github.com/bitmark-inc/autonomy-api/schema"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/bitmark-inc/autonomy-api/schema"
 )
 
 func TestResourceScoreFirstRating(t *testing.T) {

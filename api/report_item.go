@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -28,18 +29,20 @@ const (
 )
 
 type reportItemQueryParams struct {
-	Scope    string `form:"scope"`
-	Type     string `form:"type"`
-	Start    int64  `form:"start"`
-	End      int64  `form:"end"`
-	Language string `form:"lang"`
-	PoiID    string `form:"poi_id"`
+	Scope       string                            `form:"scope"`
+	Type        string                            `form:"type"`
+	Granularity schema.AggregationTimeGranularity `form:"granularity"`
+	Start       int64                             `form:"start"`
+	End         int64                             `form:"end"`
+	Language    string                            `form:"lang"`
+	PoiID       string                            `form:"poi_id"`
 }
 
 type reportItem struct {
-	Name       string   `json:"name"`
-	Value      *int     `json:"value"`
-	ChangeRate *float64 `json:"change_rate"`
+	Name         string         `json:"name"`
+	Value        *int           `json:"value"`
+	ChangeRate   *float64       `json:"change_rate"`
+	Distribution map[string]int `json:"distribution,omitempty"`
 }
 
 func (s *Server) getReportItems(c *gin.Context) {
@@ -60,6 +63,17 @@ func (s *Server) getReportItems(c *gin.Context) {
 	previousPeriodEnd := params.Start
 	localizer := utils.NewLocalizer(params.Language)
 
+	profile, err := s.mongoStore.GetProfile(account.AccountNumber)
+	if err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+	utcOffset := "+0000"
+	tz := utils.GetLocation(profile.Timezone)
+	if tz != nil {
+		utcOffset = time.Now().In(tz).Format("-0700")
+	}
+
 	var profileID string
 	var loc schema.Location
 	var scoreOwner string
@@ -67,6 +81,60 @@ func (s *Server) getReportItems(c *gin.Context) {
 	case reportItemScopeIndividual:
 		profileID = account.ProfileID.String()
 		scoreOwner = account.AccountNumber
+
+		if params.Type == reportItemTypeSymptom {
+			currentBuckets, err := s.mongoStore.GetPersonalSymptomTimeSeriesData(profileID, currentPeriodStart, currentPeriodEnd, utcOffset, params.Granularity)
+			if err != nil {
+				abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+				return
+			}
+			previousDistribution, err := s.mongoStore.FindSymptomDistribution(profileID, &loc, consts.NEARBY_DISTANCE_RANGE, previousPeriodStart, previousPeriodEnd, false)
+			if err != nil {
+				abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+				return
+			}
+			results := gatherReportItemsWithDistribution(currentBuckets, previousDistribution, false)
+			items := getReportItemsForDisplay(results, func(symptomID string) string {
+				name, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: fmt.Sprintf("symptoms.%s.name", symptomID)})
+				if err == nil {
+					return name
+				}
+
+				symptoms, _ := s.mongoStore.FindSymptomsByIDs([]string{symptomID})
+				if len(symptoms) == 1 {
+					return symptoms[0].Name
+				}
+				return ""
+			})
+			c.JSON(http.StatusOK, gin.H{"report_items": items})
+			return
+		} else if params.Type == reportItemTypeBehavior {
+			currentBuckets, err := s.mongoStore.GetPersonalBehaviorTimeSeriesData(profileID, currentPeriodStart, currentPeriodEnd, utcOffset, params.Granularity)
+			if err != nil {
+				abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+				return
+			}
+			previousDistribution, err := s.mongoStore.FindBehaviorDistribution(profileID, &loc, consts.NEARBY_DISTANCE_RANGE, previousPeriodStart, previousPeriodEnd)
+			if err != nil {
+				abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+				return
+			}
+			results := gatherReportItemsWithDistribution(currentBuckets, previousDistribution, false)
+			items := getReportItemsForDisplay(results, func(behaviorID string) string {
+				name, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: fmt.Sprintf("behaviors.%s.name", behaviorID)})
+				if err == nil {
+					return name
+				}
+
+				behaviors, _ := s.mongoStore.FindBehaviorsByIDs([]string{behaviorID})
+				if len(behaviors) == 1 {
+					return behaviors[0].Name
+				}
+				return ""
+			})
+			c.JSON(http.StatusOK, gin.H{"report_items": items})
+			return
+		}
 	case reportItemScopeNeighborhood:
 		if lastLocation := account.Profile.State.LastLocation; lastLocation == nil {
 			abortWithEncoding(c, http.StatusBadRequest, errorUnknownAccountLocation)
@@ -111,7 +179,7 @@ func (s *Server) getReportItems(c *gin.Context) {
 
 	switch params.Type {
 	case reportItemTypeScore:
-		currAvgScore, err := s.mongoStore.GetScoreAverage(scoreOwner, currentPeriodStart, currentPeriodEnd)
+		currData, err := s.mongoStore.GetScoreTimeSeriesData(scoreOwner, currentPeriodStart, currentPeriodEnd, params.Granularity)
 		if err != nil {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
@@ -121,9 +189,11 @@ func (s *Server) getReportItems(c *gin.Context) {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
 		}
-		results := gatherReportItems(
-			map[string]int{"autonomy score": int(currAvgScore)},
-			map[string]int{"autonomy score": int(prevAvgScore)})
+
+		results := gatherReportItemsWithDistribution(
+			map[string][]schema.Bucket{"autonomy score": currData},
+			map[string]int{"autonomy score": int(prevAvgScore)},
+			true)
 		items := getReportItemsForDisplay(results, func(scoreID string) string {
 			// TODO: translate
 			return scoreID
@@ -224,6 +294,43 @@ func gatherReportItems(currentDistribution, previousDistribution map[string]int)
 		v := value
 		changeRate := 100.0
 		items[itemID] = &reportItem{Value: &v, ChangeRate: &changeRate}
+	}
+	for itemID, value := range previousDistribution {
+		if _, ok := items[itemID]; ok { // reported both in the current and previous periods
+			changeRate := score.ChangeRate(float64(*items[itemID].Value), float64(value))
+			items[itemID].ChangeRate = &changeRate
+		} else { // only reported in the previous period
+			v := 0
+			changeRate := -100.0
+			items[itemID] = &reportItem{Value: &v, ChangeRate: &changeRate}
+		}
+	}
+	return items
+}
+
+// gatherReportItemsByAggregation is similar to the above function `gatherReportItems`.
+// It provides distribution and the aggregated value of the current time period.
+func gatherReportItemsWithDistribution(currentBuckets map[string][]schema.Bucket, previousDistribution map[string]int, avg bool) map[string]*reportItem {
+	items := make(map[string]*reportItem)
+	for itemID, buckets := range currentBuckets {
+		if len(buckets) == 0 {
+			continue
+		}
+		// For each reported item shown in this period, assume it's not reported in the previous period,
+		// So the change rate is 100 by default.
+		// If it's also reported in the previous period, the rate will be adjusted accordingly.
+		sum := 0
+		distribution := make(map[string]int)
+		for _, b := range buckets {
+			sum += b.Value
+			distribution[b.Name] = b.Value
+		}
+		value := sum
+		if avg {
+			value = sum / len(distribution)
+		}
+		changeRate := 100.0
+		items[itemID] = &reportItem{Value: &value, ChangeRate: &changeRate, Distribution: distribution}
 	}
 	for itemID, value := range previousDistribution {
 		if _, ok := items[itemID]; ok { // reported both in the current and previous periods

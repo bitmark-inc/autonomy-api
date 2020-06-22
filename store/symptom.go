@@ -32,6 +32,7 @@ type Symptom interface {
 	FindSymptomDistribution(profileID string, loc *schema.Location, dist int, start, end int64, distinct bool) (map[string]int, error)
 	FindNearbyNonOfficialSymptoms(dist int, loc schema.Location) ([]schema.Symptom, error)
 	GetSymptomCount(profileID string, loc *schema.Location, dist int, now time.Time) (int, int, error)
+	GetPersonalSymptomTimeSeriesData(profileID string, start, end int64, utcOffset string, granularity schema.AggregationTimeGranularity) (map[string][]schema.Bucket, error)
 }
 
 func (m *mongoDB) CreateSymptom(symptom schema.Symptom) (string, error) {
@@ -466,4 +467,119 @@ func (m *mongoDB) GetSymptomCount(profileID string, loc *schema.Location, dist i
 	today := todayStartAt.Format("2006-01-02")
 	yesterday := yesterdayStartAt.Format("2006-01-02")
 	return result[today], result[yesterday], nil
+}
+
+// GetPersonalSymptomTimeSeriesData returns the number of reported symptoms
+// for each time interval (determined by `granularity`) in the specified time range (determined by `start` and `end`).
+// Duplicated items in a day are counted as one.
+func (m *mongoDB) GetPersonalSymptomTimeSeriesData(profileID string, start, end int64, utcOffset string, granularity schema.AggregationTimeGranularity) (map[string][]schema.Bucket, error) {
+	c := m.client.Database(m.database).Collection(schema.SymptomReportCollection)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+
+	var dateStringLength int
+	switch granularity {
+	case schema.AggregationByMonth:
+		dateStringLength = 7 // 2006-01
+	case schema.AggregationByDay:
+		dateStringLength = 10 // 2006-01-02
+	}
+
+	pipeline := []bson.M{
+		{"$match": bson.M{"profile_id": profileID}},
+		aggStageReportedBetween(start, end),
+		{
+			"$project": bson.M{
+				"profile_id": 1,
+				"symptoms": bson.M{
+					"$concatArrays": bson.A{
+						bson.M{"$ifNull": bson.A{"$official_symptoms", bson.A{}}},
+						bson.M{"$ifNull": bson.A{"$customized_symptoms", bson.A{}}},
+						bson.M{"$ifNull": bson.A{"$symptoms", bson.A{}}},
+					},
+				},
+				"date": bson.M{
+					"$dateToString": bson.M{
+						"format": "%Y-%m-%d",
+						"date": bson.M{
+							"$toDate": bson.M{
+								"$multiply": bson.A{"$ts", 1000},
+							},
+						},
+						"timezone": utcOffset,
+					},
+				},
+			},
+		},
+		{
+			"$unwind": bson.M{
+				"path":                       "$symptoms",
+				"preserveNullAndEmptyArrays": false,
+			},
+		},
+		{
+			"$group": bson.M{
+				"_id": bson.M{
+					"profile_id": "$profile_id",
+					"date":       "$date",
+				},
+				"symptoms": bson.M{
+					"$addToSet": "$symptoms._id",
+				},
+			},
+		},
+		{
+			"$unwind": bson.M{
+				"path":                       "$symptoms",
+				"preserveNullAndEmptyArrays": false,
+			},
+		},
+		{
+			"$project": bson.M{
+				"_id":         0,
+				"symptom_id":  "$symptoms",
+				"bucket_name": bson.M{"$substr": bson.A{"$_id.date", 0, dateStringLength}},
+			},
+		},
+		{
+			"$group": bson.M{
+				"_id": bson.M{
+					"symptom_id":  "$symptom_id",
+					"bucket_name": "$bucket_name",
+				},
+				"count": bson.M{
+					"$sum": 1,
+				},
+			},
+		},
+		{
+			"$sort": bson.M{
+				"_id.bucket_name": 1,
+			},
+		},
+		{
+			"$group": bson.M{
+				"_id": "$_id.symptom_id",
+				"buckets": bson.M{
+					"$push": bson.M{
+						"name":  "$_id.bucket_name",
+						"value": "$count",
+					},
+				},
+			},
+		},
+	}
+	cursor, err := c.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	results := make(map[string][]schema.Bucket)
+	for cursor.Next(ctx) {
+		var aggItem schema.BucketAggregation
+		if err := cursor.Decode(&aggItem); err != nil {
+			return nil, err
+		}
+		results[aggItem.ID] = aggItem.Buckets
+	}
+	return results, nil
 }
