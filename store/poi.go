@@ -139,6 +139,7 @@ type POI interface {
 	ListPOIByResource(resourceID string, coordinates schema.Location) ([]schema.POI, error)
 
 	GetPOI(poiID primitive.ObjectID) (*schema.POI, error)
+	GetPOIByCoordinates(schema.Location) (*schema.POI, error)
 	GetPOIMetrics(poiID primitive.ObjectID) (*schema.Metric, error)
 	UpdatePOIGeoInfo(poiID primitive.ObjectID, location schema.Location) error
 	UpdatePOIMetric(poiID primitive.ObjectID, metric schema.Metric, autonomyScore, autonomyScoreDelta float64) error
@@ -373,6 +374,50 @@ func (m *mongoDB) GetPOI(poiID primitive.ObjectID) (*schema.POI, error) {
 		}
 
 		if err := m.UpdatePOIGeoInfo(poiID, location); err != nil {
+			log.WithError(err).Error("can not update poi geo info")
+			return nil, err
+		}
+
+		poi.Country = location.Country
+		poi.County = location.County
+		poi.State = location.State
+	}
+
+	return &poi, nil
+}
+
+// GetPOIByCoordinates searches POI by coordinates. There will be only one POI matches since
+// we have add an index to make sure the coordinates of each POI is unique.
+func (m *mongoDB) GetPOIByCoordinates(coordinates schema.Location) (*schema.POI, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+
+	c := m.client.Database(m.database).Collection(schema.POICollection)
+
+	// find user's POI
+	var poi schema.POI
+	query := bson.M{"location.coordinates": bson.A{coordinates.Longitude, coordinates.Latitude}}
+	if err := c.FindOne(ctx, query).Decode(&poi); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, ErrPOINotFound
+		}
+		return nil, err
+	}
+
+	// fetch poi geo info if it is not existent
+	if poi.Country == "" {
+		log.Info("fetch poi geo info from external service")
+		location := schema.Location{
+			Latitude:  poi.Location.Coordinates[1],
+			Longitude: poi.Location.Coordinates[0],
+		}
+		location, err := geo.PoliticalGeoInfo(location)
+		if err != nil {
+			log.WithError(err).Error("can not fetch geo info")
+			return nil, err
+		}
+
+		if err := m.UpdatePOIGeoInfo(poi.ID, location); err != nil {
 			log.WithError(err).Error("can not update poi geo info")
 			return nil, err
 		}

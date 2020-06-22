@@ -18,11 +18,16 @@ const (
 	metricUpdateInterval = 5 * time.Minute
 )
 
-// autonomyProfile is a routing to dispatch requests between current user profile or a POI profile
+// autonomyProfile is a handler that dispatches requests between current user profile or a POI profile
+// There are two type for POI profile. One is with a POI ID. Another is to provide a coordinates.
 func (s *Server) autonomyProfile(c *gin.Context) {
 	var params struct {
-		Me    bool   `form:"me"`
-		POIID string `form:"poi_id"`
+		Me           bool    `form:"me"`
+		POIID        string  `form:"poi_id"`
+		Latitude     float64 `form:"lat"`
+		Longitude    float64 `form:"lng"`
+		Language     string  `form:"lang"`
+		AllResources bool    `form:"all_resources"`
 	}
 
 	if err := c.Bind(&params); err != nil {
@@ -30,11 +35,24 @@ func (s *Server) autonomyProfile(c *gin.Context) {
 		return
 	}
 
+	if "" == params.Language {
+		params.Language = "en"
+	}
+
+	c.Set("language", params.Language)
+	c.Set("allResources", params.AllResources)
+
 	if params.Me {
 		s.currentAreaProfile(c)
 		return
 	} else if params.POIID != "" {
-		s.placeProfile(c, params.POIID)
+		s.placeProfile(c, params.POIID, nil)
+		return
+	} else if params.Latitude != 0 && params.Longitude != 0 {
+		s.placeProfile(c, "", &schema.Location{
+			Longitude: params.Longitude,
+			Latitude:  params.Latitude,
+		})
 		return
 	} else {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters)
@@ -112,65 +130,31 @@ func (s *Server) currentAreaProfile(c *gin.Context) {
 	})
 }
 
-func (s *Server) placeProfile(c *gin.Context, id string) {
-	accountNumber := c.GetString("requester")
+// placeProfileResponse is a struct for response of the autonomy profile of a given POI
+type placeProfileResponse struct {
+	ID              string                     `json:"id"`
+	Alias           string                     `json:"alias"`
+	Address         string                     `json:"address"`
+	Owned           bool                       `json:"owned"`
+	Rating          bool                       `json:"rating"`
+	HasMoreResource bool                       `json:"has_more_resources"`
+	Metric          schema.Metric              `json:"neighbor"`
+	Resources       []schema.POIResourceRating `json:"resources"`
+	Score           float64                    `json:"autonomy_score"`
+	ScoreDelta      float64                    `json:"autonomy_score_delta"`
+}
 
-	profile, err := s.mongoStore.GetProfile(accountNumber)
-	if err != nil {
-		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-		return
-	}
+// summarizePlaceProfile summarize profile response for a given POI. It takes profile and language
+// into consideration to generate proper response.
+func summarizePlaceProfile(poi *schema.POI, profile *schema.Profile, language string, allResources bool) interface{} {
+	var resp placeProfileResponse
 
-	poiID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, fmt.Errorf("invalid POI ID"))
-		return
-	}
-
-	// resources
-	var params struct {
-		Language     string `form:"lang"`
-		AllResources bool   `form:"all_resources"`
-	}
-	if err := c.Bind(&params); err != nil {
-		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
-		return
-	}
-
-	if "" == params.Language {
-		params.Language = "en"
-	}
-
-	var profilePoi schema.ProfilePOI
-	poiFound := false
+	var profilePOI *schema.ProfilePOI
 	for _, p := range profile.PointsOfInterest {
-		if p.ID == poiID {
-			profilePoi = p
-			poiFound = true
+		if p.ID == poi.ID {
+			profilePOI = &p
+			break
 		}
-	}
-	if !poiFound {
-		abortWithEncoding(c, http.StatusBadRequest, errorNoPOIInProfile)
-	}
-
-	// Get POI Resources
-	poi, err := s.mongoStore.GetPOI(poiID)
-	if err != nil {
-		c.Error(err)
-		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-		return
-	}
-	var resp struct {
-		ID      string `json:"id"`
-		Alias   string `json:"alias"`
-		Address string `json:"address"`
-		//Location        *schema.Location           `json:"location"`
-		Rating          bool                       `json:"rating"`
-		HasMoreResource bool                       `json:"has_more_resources"`
-		Metric          schema.Metric              `json:"neighbor"`
-		Resources       []schema.POIResourceRating `json:"resources"`
-		Score           float64                    `json:"autonomy_score"`
-		ScoreDelta      float64                    `json:"autonomy_score_delta"`
 	}
 
 	resources := poi.ResourceRatings.Resources
@@ -181,7 +165,7 @@ func (s *Server) placeProfile(c *gin.Context, id string) {
 			return resources[i].Ratings > resources[j].Ratings // Inverse sort
 		})
 
-		if !params.AllResources { // return 10 records and indicate more or not
+		if !allResources { // return 10 records and indicate more or not
 			if len(resources) > 10 {
 				resources = resources[:10]
 				resp.HasMoreResource = true
@@ -189,7 +173,7 @@ func (s *Server) placeProfile(c *gin.Context, id string) {
 		}
 
 		for i, r := range resources {
-			name, _ := store.ResolveResourceNameByID(r.ID, params.Language)
+			name, _ := store.ResolveResourceNameByID(r.ID, language)
 			if "" == name { // show original name
 				name = r.Name
 			}
@@ -198,10 +182,13 @@ func (s *Server) placeProfile(c *gin.Context, id string) {
 	}
 
 	resp.ID = poi.ID.Hex()
-	resp.Alias = profilePoi.Alias
-	resp.Address = profilePoi.Address
+	if profilePOI != nil {
+		resp.Alias = profilePOI.Alias
+		resp.Address = profilePOI.Address
+		resp.Owned = true
+	}
 
-	if len(profilePoi.ResourceRatings.Resources) > 0 {
+	if len(resources) > 0 {
 		resp.Rating = true
 	}
 	resp.Score = poi.Score
@@ -209,5 +196,71 @@ func (s *Server) placeProfile(c *gin.Context, id string) {
 	resp.Metric = poi.Metric
 	resp.Resources = resources
 
-	c.JSON(http.StatusOK, resp)
+	return resp
+}
+
+func (s *Server) placeProfile(c *gin.Context, id string, location *schema.Location) {
+	accountNumber := c.GetString("requester")
+
+	profile, err := s.mongoStore.GetProfile(accountNumber)
+	if err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+
+	allResources := c.GetBool("allResources")
+	language := c.GetString("language")
+	resources := []schema.POIResourceRating{}
+
+	if id != "" {
+		poiID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, fmt.Errorf("invalid POI ID"))
+			return
+		}
+
+		// Get POI resource
+		poi, err := s.mongoStore.GetPOI(poiID)
+		if err != nil {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+			return
+		}
+
+		resp := summarizePlaceProfile(poi, profile, language, allResources)
+		c.JSON(http.StatusOK, resp)
+	} else if location != nil {
+		// Get POI resource by coordinates
+		poi, err := s.mongoStore.GetPOIByCoordinates(*location)
+		if err != nil {
+			if err != store.ErrPOINotFound {
+				abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+				return
+			}
+		}
+
+		if poi != nil {
+			resp := summarizePlaceProfile(poi, profile, language, allResources)
+			c.JSON(http.StatusOK, resp)
+		} else {
+			// Collect profile by location if there is no poi meet the location
+			metric, err := s.mongoStore.CollectRawMetrics(*location)
+			if err != nil {
+				abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+				return
+			}
+			*metric = score.CalculateMetric(*metric, nil)
+			score, _, scoreDelta := score.CalculatePOIAutonomyScore(nil, *metric)
+
+			resp := placeProfileResponse{
+				Score:      score,
+				ScoreDelta: scoreDelta,
+				Metric:     *metric,
+				Resources:  resources,
+			}
+			c.JSON(http.StatusOK, resp)
+		}
+	} else {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters)
+		return
+	}
 }

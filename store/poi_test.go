@@ -904,6 +904,34 @@ func (s *POITestSuite) TestListPOIByResourceOutOfRange() {
 	s.Len(pois, 0)
 }
 
+func (s *POITestSuite) TestGetPOIByCoordinates() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	location := schema.Location{
+		Latitude:  25.123,
+		Longitude: 120.123,
+	}
+
+	poi, err := store.GetPOIByCoordinates(location)
+	s.NoError(err)
+	s.NotNil(poi)
+	s.Equal("Taiwan", poi.Country)
+	s.Equal("", poi.State)
+	s.Equal("Yilan County", poi.County)
+	s.Equal([]float64{location.Longitude, location.Latitude}, poi.Location.Coordinates)
+}
+
+func (s *POITestSuite) TestGetPOIByCoordinatesNoPOI() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	location := schema.Location{
+		Latitude:  25.1111,
+		Longitude: 120.1111,
+	}
+
+	poi, err := store.GetPOIByCoordinates(location)
+	s.EqualError(err, ErrPOINotFound.Error())
+	s.Nil(poi)
+}
+
 // In order for 'go test' to run this suite, we need to create
 // a normal test function and pass our suite to s.Run
 func TestPOITestSuite(t *testing.T) {
