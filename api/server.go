@@ -196,7 +196,7 @@ func (s *Server) setupRouter() *gin.Engine {
 	poiRoute.Use(s.recognizeAccountMiddleware())
 	{
 		poiRoute.POST("", s.addPOI)
-		poiRoute.GET("", s.getPOI)
+		poiRoute.GET("", s.listPOI)
 		poiRoute.POST("/:poiID/resources", s.addPOIResources)
 		poiRoute.GET("/:poiID/resources", s.getPOIResources)
 		poiRoute.PATCH("/:poiID", s.updatePOIAlias)

@@ -136,6 +136,7 @@ func getResourceList(lang string, important bool) ([]schema.Resource, error) {
 type POI interface {
 	AddPOI(accountNumber string, alias, address, placeType string, lon, lat float64) (*schema.POI, error)
 	ListPOI(accountNumber string) ([]schema.POIDetail, error)
+	ListPOIByResource(resourceID string, coordinates schema.Location) ([]schema.POI, error)
 
 	GetPOI(poiID primitive.ObjectID) (*schema.POI, error)
 	GetPOIMetrics(poiID primitive.ObjectID) (*schema.Metric, error)
@@ -188,6 +189,8 @@ func (m *mongoDB) AddPOI(accountNumber string, alias, address, placeType string,
 				"country":    location.Country,
 				"state":      location.State,
 				"county":     location.County,
+				"address":    address,
+				"alias":      alias,
 				"place_type": placeType,
 			})
 
@@ -297,6 +300,46 @@ func (m *mongoDB) ListPOI(accountNumber string) ([]schema.POIDetail, error) {
 	}
 
 	return result.Points, nil
+}
+
+// ListPOIByResource returns all POI that satisfied following conditions:
+// - the place has rated for a given resource.
+// - the distance between the place and a given coordinates is within 50000m
+func (m *mongoDB) ListPOIByResource(resourceID string, coordinates schema.Location) ([]schema.POI, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+
+	c := m.client.Database(m.database).Collection(schema.POICollection)
+
+	log.WithField("location", coordinates).WithField("resource", resourceID).Info("list POI by resource and location ")
+	cursor, err := c.Aggregate(ctx, mongo.Pipeline{
+		AggregationGeoNear(coordinates, 50000, GeoNearOption{
+			DistanceKey:        "distance",
+			DistanceMultiplier: 0.001,
+		}),
+		AggregationUnwind("$resource_ratings.resources"),
+		AggregationMatch(bson.M{
+			"resource_ratings.resources.resource.id": resourceID,
+			"resource_ratings.resources.ratings":     bson.M{"$gt": 0},
+		}),
+		AggregationAddFields(bson.M{
+			"resource_score": "$resource_ratings.resources.score",
+		}),
+		AggregationProject(bson.M{
+			"resource_ratings": 0,
+			"metric":           0,
+		}),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var pois []schema.POI
+	if err := cursor.All(ctx, &pois); err != nil {
+		return nil, err
+	}
+
+	return pois, nil
 }
 
 // GetPOI finds POI by poi ID

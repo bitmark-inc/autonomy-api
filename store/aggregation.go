@@ -1,6 +1,10 @@
 package store
 
-import "go.mongodb.org/mongo-driver/bson"
+import (
+	"go.mongodb.org/mongo-driver/bson"
+
+	"github.com/bitmark-inc/autonomy-api/schema"
+)
 
 // AggregationMatch helps generate aggregation object for $match
 func AggregationMatch(matchCondition bson.M) bson.D {
@@ -51,5 +55,42 @@ func AggregationGroup(id string, groupConditions bson.D) bson.D {
 		bson.E{
 			"$group", group,
 		},
+	}
+}
+
+// GeoNearOption is an option for AggregationGeoNear help function
+type GeoNearOption struct {
+	GeoKey             string
+	DistanceKey        string
+	DistanceMultiplier float64
+}
+
+// AggregationGroup helps generate aggregation object for $geoNear
+func AggregationGeoNear(coordinates schema.Location, distance int, options ...GeoNearOption) bson.D {
+	geoNear := bson.M{
+		"near": bson.M{
+			"type":        "Point",
+			"coordinates": []float64{coordinates.Longitude, coordinates.Latitude},
+		},
+		"maxDistance": distance,
+		"spherical":   true,
+	}
+
+	if len(options) > 0 {
+		option := options[0]
+		if option.GeoKey != "" {
+			geoNear["key"] = option.GeoKey
+		}
+
+		if option.DistanceKey != "" {
+			geoNear["distanceField"] = option.DistanceKey
+			if option.DistanceMultiplier != 0 {
+				geoNear["distanceMultiplier"] = option.DistanceMultiplier
+			}
+		}
+	}
+
+	return bson.D{
+		bson.E{"$geoNear", geoNear},
 	}
 }

@@ -13,6 +13,8 @@ const (
 type POI struct {
 	ID              primitive.ObjectID `bson:"_id"`
 	Location        *GeoJSON           `bson:"location"`
+	Address         string             `bson:"address"`
+	Alias           string             `bson:"alias"`
 	Score           float64            `bson:"autonomy_score"`
 	ScoreDelta      float64            `bson:"autonomy_score_delta"`
 	Metric          Metric             `bson:"metric"`
@@ -20,6 +22,8 @@ type POI struct {
 	State           string             `bson:"state" json:"-"`
 	County          string             `bson:"county" json:"-"`
 	PlaceType       string             `bson:"place_type" json:"-"`
+	Distance        *float64           `bson:"distance,omitempty"`
+	ResourceScore   *float64           `bson:"resource_score,omitempty"`
 	ResourceRatings POIRatingsMetric   `bson:"resource_ratings" json:"-"`
 }
 
@@ -30,7 +34,7 @@ type ProfilePOI struct {
 	Score           float64              `bson:"score" json:"score"`
 	PlaceType       string               `bson:"place_type" json:"place_type"`
 	Metric          Metric               `bson:"metric" json:"-"`
-	ResourceRatings ProfileRatingsMetric `bson:"resource_ratings" json:"resource_ratings"`
+	ResourceRatings ProfileRatingsMetric `bson:"resource_ratings" json:"-"`
 	UpdatedAt       time.Time            `bson:"updated_at" json:"updated_at"`
 }
 

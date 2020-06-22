@@ -35,6 +35,8 @@ var noResourcesPOIID2 = primitive.NewObjectID()
 var duplicatedResourcesPOIID = primitive.NewObjectID()
 var twoResourcesPOIID = primitive.NewObjectID()
 var officialResourcesPOIID = primitive.NewObjectID()
+var listResourcePOI1ID = primitive.NewObjectID()
+var listResourcePOI2ID = primitive.NewObjectID()
 
 var notFoundPOIID = primitive.NewObjectID()
 
@@ -155,6 +157,35 @@ var (
 		ResourceRatings: schema.POIRatingsMetric{
 			Resources: []schema.POIResourceRating{
 				{Resource: schema.Resource{ID: "12c99e1e3afec0ce9c21d27794d21bfff496116b8ed9ba354f731d35cb0be6b5", Name: "test3"}},
+			},
+		},
+	}
+
+	listResourcePOI1 = schema.POI{
+		ID: listResourcePOI1ID,
+		Location: &schema.GeoJSON{
+			Type:        "Point",
+			Coordinates: []float64{119.12345, 25.12345},
+		},
+		ResourceRatings: schema.POIRatingsMetric{
+			Resources: []schema.POIResourceRating{
+				{Resource: schema.Resource{ID: "resource_no_rating", Name: "resource_no_rating"}},
+				{Resource: schema.Resource{ID: "resource_11", Name: "resource_11"}, Ratings: 2},
+				{Resource: schema.Resource{ID: "resource_12", Name: "resource_12"}, Ratings: 3},
+			},
+		},
+	}
+
+	listResourcePOI2 = schema.POI{
+		ID: listResourcePOI2ID,
+		Location: &schema.GeoJSON{
+			Type:        "Point",
+			Coordinates: []float64{119.12345, 25.12345},
+		},
+		ResourceRatings: schema.POIRatingsMetric{
+			Resources: []schema.POIResourceRating{
+				{Resource: schema.Resource{ID: "resource_no_rating", Name: "resource_no_rating"}},
+				{Resource: schema.Resource{ID: "resource_11", Name: "resource_11"}, Ratings: 2},
 			},
 		},
 	}
@@ -307,6 +338,8 @@ func (s *POITestSuite) LoadMongoDBFixtures() error {
 		twoResourcesPOI,
 		duplicatedResourcesPOI,
 		officialResourcesPOI,
+		listResourcePOI1,
+		listResourcePOI2,
 	}); err != nil {
 		return err
 	}
@@ -817,6 +850,58 @@ func (s *POITestSuite) TestGetResourceListImportant() {
 	list, err := getResourceList("", true)
 	s.NoError(err)
 	s.Len(list, len(importantResourceID))
+}
+
+func (s *POITestSuite) TestListPOIByResourceNotAdded() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	location := schema.Location{
+		Latitude:  25.12345,
+		Longitude: 119.12345,
+	}
+
+	pois, err := store.ListPOIByResource("resource_not_added", location)
+	s.NoError(err)
+	s.Len(pois, 0)
+}
+
+func (s *POITestSuite) TestListPOIByResourceAddedButNoRating() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	location := schema.Location{
+		Latitude:  25.12345,
+		Longitude: 119.12345,
+	}
+
+	pois, err := store.ListPOIByResource("resource_no_rating", location)
+	s.NoError(err)
+	s.Len(pois, 0)
+}
+
+func (s *POITestSuite) TestListPOIByResourceNormal() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	location := schema.Location{
+		Latitude:  25.12345,
+		Longitude: 119.12345,
+	}
+
+	pois, err := store.ListPOIByResource("resource_11", location)
+	s.NoError(err)
+	s.Len(pois, 2)
+
+	pois, err = store.ListPOIByResource("resource_12", location)
+	s.NoError(err)
+	s.Len(pois, 1)
+}
+
+func (s *POITestSuite) TestListPOIByResourceOutOfRange() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	location := schema.Location{
+		Latitude:  20,
+		Longitude: 120,
+	}
+
+	pois, err := store.ListPOIByResource("resource_11", location)
+	s.NoError(err)
+	s.Len(pois, 0)
 }
 
 // In order for 'go test' to run this suite, we need to create
