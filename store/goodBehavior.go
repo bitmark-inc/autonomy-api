@@ -412,6 +412,9 @@ func (m *mongoDB) GetBehaviorCount(profileID string, loc *schema.Location, dist 
 	return result[today], result[yesterday], nil
 }
 
+// GetPersonalBehaviorTimeSeriesData returns the number of reported behaviors
+// for each time interval (determined by `granularity`) in the specified time range (determined by `start` and `end`).
+// Duplicated items in a day are counted as one.
 func (m *mongoDB) GetPersonalBehaviorTimeSeriesData(profileID string, start, end int64, utcOffset string, granularity schema.AggregationTimeGranularity) (map[string][]schema.Bucket, error) {
 	c := m.client.Database(m.database).Collection(schema.BehaviorReportCollection)
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)

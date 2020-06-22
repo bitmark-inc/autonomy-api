@@ -471,6 +471,7 @@ func (m *mongoDB) GetSymptomCount(profileID string, loc *schema.Location, dist i
 
 // GetPersonalSymptomTimeSeriesData returns the number of reported symptoms
 // for each time interval (determined by `granularity`) in the specified time range (determined by `start` and `end`).
+// Duplicated items in a day are counted as one.
 func (m *mongoDB) GetPersonalSymptomTimeSeriesData(profileID string, start, end int64, utcOffset string, granularity schema.AggregationTimeGranularity) (map[string][]schema.Bucket, error) {
 	c := m.client.Database(m.database).Collection(schema.SymptomReportCollection)
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
