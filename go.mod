@@ -59,6 +59,7 @@ require (
 	google.golang.org/genproto v0.0.0-20200604104852-0b0486081ffb // indirect
 	google.golang.org/grpc v1.29.1 // indirect
 	googlemaps.github.io/maps v1.2.0
+	gopkg.in/go-playground/assert.v1 v1.2.1
 	gopkg.in/ini.v1 v1.57.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200603094226-e3079894b1e8 // indirect

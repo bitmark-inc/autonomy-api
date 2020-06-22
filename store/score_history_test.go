@@ -77,10 +77,11 @@ func (s *ScoreHistoryTestSuite) TestAddScoreRecord() {
 	s.NoError(err)
 	s.Equal(60.0, record.Score)
 	s.Equal(schema.ScoreRecord{
-		Owner: "userA",
-		Type:  schema.ScoreRecordTypeIndividual,
-		Score: 60.0,
-		Date:  "2020-05-25",
+		Owner:       "userA",
+		Type:        schema.ScoreRecordTypeIndividual,
+		Score:       60.0,
+		UpdateTimes: 1,
+		Date:        "2020-05-25",
 	}, record)
 
 	// user A: second update in the same day
@@ -91,10 +92,11 @@ func (s *ScoreHistoryTestSuite) TestAddScoreRecord() {
 		context.Background(), query, options.FindOne()).Decode(&record)
 	s.NoError(err)
 	s.Equal(schema.ScoreRecord{
-		Owner: "userA",
-		Type:  schema.ScoreRecordTypeIndividual,
-		Score: 75.0,
-		Date:  "2020-05-25",
+		Owner:       "userA",
+		Type:        schema.ScoreRecordTypeIndividual,
+		Score:       67.5, // (60 + 75) / 2
+		UpdateTimes: 2,
+		Date:        "2020-05-25",
 	}, record)
 
 	// user B: first update in the same day
@@ -105,10 +107,11 @@ func (s *ScoreHistoryTestSuite) TestAddScoreRecord() {
 		context.Background(), query, options.FindOne()).Decode(&record)
 	s.NoError(err)
 	s.Equal(schema.ScoreRecord{
-		Owner: "userA",
-		Type:  schema.ScoreRecordTypeIndividual,
-		Score: 75.0,
-		Date:  "2020-05-25",
+		Owner:       "userA",
+		Type:        schema.ScoreRecordTypeIndividual,
+		Score:       67.5,
+		UpdateTimes: 2,
+		Date:        "2020-05-25",
 	}, record)
 	err = s.testDatabase.Collection(schema.ScoreHistoryCollection).FindOne(
 		context.Background(), bson.M{
@@ -117,10 +120,11 @@ func (s *ScoreHistoryTestSuite) TestAddScoreRecord() {
 		}, options.FindOne()).Decode(&record)
 	s.NoError(err)
 	s.Equal(schema.ScoreRecord{
-		Owner: "userB",
-		Type:  schema.ScoreRecordTypeIndividual,
-		Score: 40.0,
-		Date:  "2020-05-25",
+		Owner:       "userB",
+		Type:        schema.ScoreRecordTypeIndividual,
+		Score:       40.0,
+		UpdateTimes: 1,
+		Date:        "2020-05-25",
 	}, record)
 }
 

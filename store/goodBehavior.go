@@ -36,6 +36,7 @@ type GoodBehaviorReport interface {
 	ListOfficialBehavior(string) ([]schema.Behavior, error)
 	ListCustomizedBehaviors() ([]schema.Behavior, error)
 	GetBehaviorCount(profileID string, loc *schema.Location, dist int, now time.Time) (int, int, error)
+	GetPersonalBehaviorTimeSeriesData(profileID string, start, end int64, utcOffset string, granularity schema.AggregationTimeGranularity) (map[string][]schema.Bucket, error)
 }
 
 func (m *mongoDB) ListOfficialBehavior(lang string) ([]schema.Behavior, error) {
@@ -411,8 +412,114 @@ func (m *mongoDB) GetBehaviorCount(profileID string, loc *schema.Location, dist 
 	return result[today], result[yesterday], nil
 }
 
-func todayStartAt() int64 {
-	curTime := time.Now().UTC()
-	start := time.Date(curTime.Year(), curTime.Month(), curTime.Day(), 0, 0, 0, 0, time.UTC)
-	return start.Unix()
+func (m *mongoDB) GetPersonalBehaviorTimeSeriesData(profileID string, start, end int64, utcOffset string, granularity schema.AggregationTimeGranularity) (map[string][]schema.Bucket, error) {
+	c := m.client.Database(m.database).Collection(schema.BehaviorReportCollection)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+
+	var dateStringLength int
+	switch granularity {
+	case schema.AggregationByMonth:
+		dateStringLength = 7 // 2006-01
+	case schema.AggregationByDay:
+		dateStringLength = 10 // 2006-01-02
+	}
+
+	pipeline := []bson.M{
+		{"$match": bson.M{"profile_id": profileID}},
+		aggStageReportedBetween(start, end),
+		{
+			"$project": bson.M{
+				"profile_id": 1,
+				"behaviors": bson.M{
+					"$concatArrays": bson.A{
+						bson.M{"$ifNull": bson.A{"$official_behaviors", bson.A{}}},
+						bson.M{"$ifNull": bson.A{"$customized_behaviors", bson.A{}}},
+						bson.M{"$ifNull": bson.A{"$behaviors", bson.A{}}},
+					},
+				},
+				"date": bson.M{
+					"$dateToString": bson.M{
+						"format": "%Y-%m-%d",
+						"date": bson.M{
+							"$toDate": bson.M{
+								"$multiply": bson.A{"$ts", 1000},
+							},
+						},
+						"timezone": utcOffset,
+					},
+				},
+			},
+		},
+		{
+			"$unwind": bson.M{
+				"path":                       "$behaviors",
+				"preserveNullAndEmptyArrays": false,
+			},
+		},
+		{
+			"$group": bson.M{
+				"_id": bson.M{
+					"profile_id": "$profile_id",
+					"date":       "$date",
+				},
+				"behaviors": bson.M{
+					"$addToSet": "$behaviors._id",
+				},
+			},
+		},
+		{
+			"$unwind": bson.M{
+				"path":                       "$behaviors",
+				"preserveNullAndEmptyArrays": false,
+			},
+		},
+		{
+			"$project": bson.M{
+				"_id":          0,
+				"behaviors_id": "$behaviors",
+				"bucket_name":  bson.M{"$substr": bson.A{"$_id.date", 0, dateStringLength}},
+			},
+		},
+		{
+			"$group": bson.M{
+				"_id": bson.M{
+					"behaviors_id": "$behaviors_id",
+					"bucket_name":  "$bucket_name",
+				},
+				"count": bson.M{
+					"$sum": 1,
+				},
+			},
+		},
+		{
+			"$sort": bson.M{
+				"_id.bucket_name": 1,
+			},
+		},
+		{
+			"$group": bson.M{
+				"_id": "$_id.behaviors_id",
+				"buckets": bson.M{
+					"$push": bson.M{
+						"name":  "$_id.bucket_name",
+						"value": "$count",
+					},
+				},
+			},
+		},
+	}
+	cursor, err := c.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	results := make(map[string][]schema.Bucket)
+	for cursor.Next(ctx) {
+		var aggItem schema.BucketAggregation
+		if err := cursor.Decode(&aggItem); err != nil {
+			return nil, err
+		}
+		results[aggItem.ID] = aggItem.Buckets
+	}
+	return results, nil
 }

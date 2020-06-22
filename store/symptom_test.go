@@ -21,7 +21,7 @@ var (
 			{ID: "fever"},
 		},
 		Location:  locationNangangTrainStation,
-		Timestamp: tsMay25Morning,
+		Timestamp: tsMay25Morning, // 05-25 17:00 (UTC+8)
 	}
 	symptomReport2 = schema.SymptomReportData{
 		ProfileID: "userA",
@@ -30,7 +30,7 @@ var (
 			{ID: "fever"},
 		},
 		Location:  locationNangangTrainStation,
-		Timestamp: tsMay26Morning,
+		Timestamp: tsMay26Morning, // 05-26 17:00 (UTC+8)
 	}
 	symptomReport3 = schema.SymptomReportData{
 		ProfileID: "userA",
@@ -38,7 +38,7 @@ var (
 			{ID: "cough"},
 			{ID: "fever"},
 		},
-		Location:  locationSinica,
+		Location:  locationSinica, // 05-27 01:00 (UTC+8)
 		Timestamp: tsMay26Evening,
 	}
 	symptomReport4 = schema.SymptomReportData{
@@ -48,7 +48,7 @@ var (
 			{ID: "new_symptom_1"},
 		},
 		Location:  locationBitmark,
-		Timestamp: tsMay26Morning,
+		Timestamp: tsMay26Morning, // 05-26 17:00 (UTC+8)
 	}
 	symptomReport5 = schema.SymptomReportData{
 		ProfileID: "userB",
@@ -56,7 +56,7 @@ var (
 			{ID: "new_symptom_2"},
 		},
 		Location:  locationTaipeiTrainStation,
-		Timestamp: tsMay26Evening,
+		Timestamp: tsMay26Evening, // 05-27 01:00 (UTC+8)
 	}
 )
 
@@ -236,6 +236,91 @@ func (s *SymptomTestSuite) TestGetNearbyReportingSymptomsUserCount() {
 	s.NoError(err)
 	s.Equal(1, count)
 	s.Equal(0, countYesterday)
+}
+
+func (s *SymptomTestSuite) TestGetPersonalSymptomTimeSeriesData() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+
+	// the start and end time covers all inserted records for testing
+	start := time.Date(2020, 5, 24, 0, 0, 0, 0, time.UTC).UTC().Unix()
+	end := time.Date(2020, 5, 27, 24, 0, 0, 0, time.UTC).UTC().Unix()
+
+	// user A with timezone in UTC
+	results, err := store.GetPersonalSymptomTimeSeriesData("userA", start, end, "+00", "day")
+	s.NoError(err)
+	expected := map[string][]schema.Bucket{
+		"cough": {
+			{Name: "2020-05-25", Value: 1},
+			{Name: "2020-05-26", Value: 1},
+		},
+		"fever": {
+			{Name: "2020-05-25", Value: 1},
+			{Name: "2020-05-26", Value: 1},
+		},
+	}
+	s.Equal(expected, results)
+
+	// user A with timezone in UTC
+	results, err = store.GetPersonalSymptomTimeSeriesData("userA", start, end, "+00", "month")
+	s.NoError(err)
+	expected = map[string][]schema.Bucket{
+		"cough": {
+			{Name: "2020-05", Value: 2},
+		},
+		"fever": {
+			{Name: "2020-05", Value: 2},
+		},
+	}
+	s.Equal(expected, results)
+
+	// user A with timezone in UTC+8
+	results, err = store.GetPersonalSymptomTimeSeriesData("userA", start, end, "+08", "day")
+	s.NoError(err)
+	expected = map[string][]schema.Bucket{
+		"cough": {
+			{Name: "2020-05-25", Value: 1},
+			{Name: "2020-05-26", Value: 1},
+			{Name: "2020-05-27", Value: 1},
+		},
+		"fever": {
+			{Name: "2020-05-25", Value: 1},
+			{Name: "2020-05-26", Value: 1},
+			{Name: "2020-05-27", Value: 1},
+		},
+	}
+	s.Equal(expected, results)
+
+	// user B with timezone in UTC
+	results, err = store.GetPersonalSymptomTimeSeriesData("userB", start, end, "+00", "day")
+	s.NoError(err)
+	expected = map[string][]schema.Bucket{
+		"loss_taste_smell": {
+			{Name: "2020-05-26", Value: 1},
+		},
+		"new_symptom_1": {
+			{Name: "2020-05-26", Value: 1},
+		},
+		"new_symptom_2": {
+			{Name: "2020-05-26", Value: 1},
+		},
+	}
+	s.Equal(expected, results)
+
+	// user B with timezone in UTC+8
+	results, err = store.GetPersonalSymptomTimeSeriesData("userB", start, end, "+08", "day")
+	s.NoError(err)
+	expected = map[string][]schema.Bucket{
+		"loss_taste_smell": {
+			{Name: "2020-05-26", Value: 1},
+		},
+		"new_symptom_1": {
+			{Name: "2020-05-26", Value: 1},
+		},
+		"new_symptom_2": {
+			{Name: "2020-05-27", Value: 1},
+		},
+	}
+	s.Equal(expected, results)
 }
 
 func TestSymptomTestSuite(t *testing.T) {

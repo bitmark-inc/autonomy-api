@@ -43,7 +43,7 @@ var (
 			{ID: "social_distancing"},
 		},
 		Location:  locationNangangTrainStation,
-		Timestamp: tsMay25Morning,
+		Timestamp: tsMay25Morning, // 05-25 17:00 (UTC+8)
 	}
 	behaviorReport2 = schema.BehaviorReportData{
 		ProfileID: "userA",
@@ -52,7 +52,7 @@ var (
 			{ID: "social_distancing"},
 		},
 		Location:  locationNangangTrainStation,
-		Timestamp: tsMay26Morning,
+		Timestamp: tsMay26Morning, // 05-26 17:00 (UTC+8)
 	}
 	behaviorReport3 = schema.BehaviorReportData{
 		ProfileID: "userA",
@@ -61,7 +61,7 @@ var (
 			{ID: "social_distancing"},
 		},
 		Location:  locationSinica,
-		Timestamp: tsMay26Evening,
+		Timestamp: tsMay26Evening, // 05-27 01:00 (UTC+8)
 	}
 	behaviorReport4 = schema.BehaviorReportData{
 		ProfileID: "userB",
@@ -70,7 +70,7 @@ var (
 			{ID: "new_behavior"},
 		},
 		Location:  locationBitmark,
-		Timestamp: tsMay26Morning,
+		Timestamp: tsMay26Morning, // 05-26 17:00 (UTC+8)
 	}
 	behaviorReport5 = schema.BehaviorReportData{
 		ProfileID: "userB",
@@ -78,7 +78,7 @@ var (
 			{ID: "new_behavior"},
 		},
 		Location:  locationTaipeiTrainStation,
-		Timestamp: tsMay26Evening,
+		Timestamp: tsMay26Evening, // 05-27 01:00 (UTC+8)
 	}
 )
 
@@ -259,6 +259,86 @@ func (s *BehaviorTestSuite) TestGetNearbyReportingBehaviorsUserCount() {
 	s.NoError(err)
 	s.Equal(1, count)
 	s.Equal(0, countYesterday)
+}
+
+func (s *BehaviorTestSuite) TestGetPersonalBehaviorTimeSeriesData() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+
+	// the start and end time covers all inserted records for testing
+	start := time.Date(2020, 5, 24, 0, 0, 0, 0, time.UTC).UTC().Unix()
+	end := time.Date(2020, 5, 27, 24, 0, 0, 0, time.UTC).UTC().Unix()
+
+	// user A with timezone in UTC
+	results, err := store.GetPersonalBehaviorTimeSeriesData("userA", start, end, "+00", "day")
+	s.NoError(err)
+	expected := map[string][]schema.Bucket{
+		"clean_hand": {
+			{Name: "2020-05-25", Value: 1},
+			{Name: "2020-05-26", Value: 1},
+		},
+		"social_distancing": {
+			{Name: "2020-05-25", Value: 1},
+			{Name: "2020-05-26", Value: 1},
+		},
+	}
+	s.Equal(expected, results)
+
+	// user A with timezone in UTC
+	results, err = store.GetPersonalBehaviorTimeSeriesData("userA", start, end, "+00", "month")
+	s.NoError(err)
+	expected = map[string][]schema.Bucket{
+		"clean_hand": {
+			{Name: "2020-05", Value: 2},
+		},
+		"social_distancing": {
+			{Name: "2020-05", Value: 2},
+		},
+	}
+	s.Equal(expected, results)
+
+	// user A with timezone in UTC+8
+	results, err = store.GetPersonalBehaviorTimeSeriesData("userA", start, end, "+08", "day")
+	s.NoError(err)
+	expected = map[string][]schema.Bucket{
+		"clean_hand": {
+			{Name: "2020-05-25", Value: 1},
+			{Name: "2020-05-26", Value: 1},
+			{Name: "2020-05-27", Value: 1},
+		},
+		"social_distancing": {
+			{Name: "2020-05-25", Value: 1},
+			{Name: "2020-05-26", Value: 1},
+			{Name: "2020-05-27", Value: 1},
+		},
+	}
+	s.Equal(expected, results)
+
+	// user B with timezone in UTC
+	results, err = store.GetPersonalBehaviorTimeSeriesData("userB", start, end, "+00", "day")
+	s.NoError(err)
+	expected = map[string][]schema.Bucket{
+		"touch_face": {
+			{Name: "2020-05-26", Value: 1},
+		},
+		"new_behavior": {
+			{Name: "2020-05-26", Value: 1},
+		},
+	}
+	s.Equal(expected, results)
+
+	// user B with timezone in UTC+8
+	results, err = store.GetPersonalBehaviorTimeSeriesData("userB", start, end, "+08", "day")
+	s.NoError(err)
+	expected = map[string][]schema.Bucket{
+		"touch_face": {
+			{Name: "2020-05-26", Value: 1},
+		},
+		"new_behavior": {
+			{Name: "2020-05-26", Value: 1},
+			{Name: "2020-05-27", Value: 1},
+		},
+	}
+	s.Equal(expected, results)
 }
 
 func TestBehaviorTestSuite(t *testing.T) {
