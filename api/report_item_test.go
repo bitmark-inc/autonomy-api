@@ -45,6 +45,7 @@ func TestGatherReportItemsWithDistribution(t *testing.T) {
 		"c": 3,
 	}
 
+	// sum buckets
 	entries := gatherReportItemsWithDistribution(currentDistribution, previousDistribution, false)
 	assert.Equal(t, 3, *entries["a"].Value)
 	assert.Equal(t, 100.0, *entries["a"].ChangeRate)
@@ -64,6 +65,7 @@ func TestGatherReportItemsWithDistribution(t *testing.T) {
 	assert.Equal(t, -100.0, *entries["c"].ChangeRate)
 	assert.Equal(t, map[string]int(nil), entries["c"].Distribution)
 
+	// avg buckets
 	entries = gatherReportItemsWithDistribution(currentDistribution, previousDistribution, true)
 	assert.Equal(t, 1, *entries["a"].Value)
 	assert.Equal(t, 100.0, *entries["a"].ChangeRate)

@@ -42,7 +42,7 @@ type reportItem struct {
 	Name         string         `json:"name"`
 	Value        *int           `json:"value"`
 	ChangeRate   *float64       `json:"change_rate"`
-	Distribution map[string]int `json:"distribution"`
+	Distribution map[string]int `json:"distribution,omitempty"`
 }
 
 func (s *Server) getReportItems(c *gin.Context) {
@@ -189,6 +189,7 @@ func (s *Server) getReportItems(c *gin.Context) {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
 		}
+
 		results := gatherReportItemsWithDistribution(
 			map[string][]schema.Bucket{"autonomy score": currData},
 			map[string]int{"autonomy score": int(prevAvgScore)},
@@ -312,6 +313,9 @@ func gatherReportItems(currentDistribution, previousDistribution map[string]int)
 func gatherReportItemsWithDistribution(currentBuckets map[string][]schema.Bucket, previousDistribution map[string]int, avg bool) map[string]*reportItem {
 	items := make(map[string]*reportItem)
 	for itemID, buckets := range currentBuckets {
+		if len(buckets) == 0 {
+			continue
+		}
 		// For each reported item shown in this period, assume it's not reported in the previous period,
 		// So the change rate is 100 by default.
 		// If it's also reported in the previous period, the rate will be adjusted accordingly.
