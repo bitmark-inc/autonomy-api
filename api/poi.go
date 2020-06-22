@@ -139,7 +139,7 @@ func (s *Server) listPOI(c *gin.Context) {
 		c.JSON(http.StatusOK, response)
 		return
 	} else {
-		abortWithEncoding(c, http.StatusBadRequest)
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters)
 		return
 	}
 }
