@@ -269,7 +269,7 @@ func (s *BehaviorTestSuite) TestGetPersonalBehaviorTimeSeriesData() {
 	end := time.Date(2020, 5, 27, 24, 0, 0, 0, time.UTC).UTC().Unix()
 
 	// user A with timezone in UTC
-	results, err := store.GetPersonalBehaviorTimeSeriesData("userA", start, end, "+00", "day")
+	results, err := store.GetPersonalBehaviorTimeSeriesData("userA", start, end, "+00", schema.AggregationByDay)
 	s.NoError(err)
 	expected := map[string][]schema.Bucket{
 		"clean_hand": {
@@ -284,7 +284,7 @@ func (s *BehaviorTestSuite) TestGetPersonalBehaviorTimeSeriesData() {
 	s.Equal(expected, results)
 
 	// user A with timezone in UTC
-	results, err = store.GetPersonalBehaviorTimeSeriesData("userA", start, end, "+00", "month")
+	results, err = store.GetPersonalBehaviorTimeSeriesData("userA", start, end, "+00", schema.AggregationByMonth)
 	s.NoError(err)
 	expected = map[string][]schema.Bucket{
 		"clean_hand": {
@@ -297,7 +297,7 @@ func (s *BehaviorTestSuite) TestGetPersonalBehaviorTimeSeriesData() {
 	s.Equal(expected, results)
 
 	// user A with timezone in UTC+8
-	results, err = store.GetPersonalBehaviorTimeSeriesData("userA", start, end, "+08", "day")
+	results, err = store.GetPersonalBehaviorTimeSeriesData("userA", start, end, "+08", schema.AggregationByDay)
 	s.NoError(err)
 	expected = map[string][]schema.Bucket{
 		"clean_hand": {
@@ -314,7 +314,7 @@ func (s *BehaviorTestSuite) TestGetPersonalBehaviorTimeSeriesData() {
 	s.Equal(expected, results)
 
 	// user B with timezone in UTC
-	results, err = store.GetPersonalBehaviorTimeSeriesData("userB", start, end, "+00", "day")
+	results, err = store.GetPersonalBehaviorTimeSeriesData("userB", start, end, "+00", schema.AggregationByDay)
 	s.NoError(err)
 	expected = map[string][]schema.Bucket{
 		"touch_face": {

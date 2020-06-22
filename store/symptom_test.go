@@ -246,7 +246,7 @@ func (s *SymptomTestSuite) TestGetPersonalSymptomTimeSeriesData() {
 	end := time.Date(2020, 5, 27, 24, 0, 0, 0, time.UTC).UTC().Unix()
 
 	// user A with timezone in UTC
-	results, err := store.GetPersonalSymptomTimeSeriesData("userA", start, end, "+00", "day")
+	results, err := store.GetPersonalSymptomTimeSeriesData("userA", start, end, "+00", schema.AggregationByDay)
 	s.NoError(err)
 	expected := map[string][]schema.Bucket{
 		"cough": {
@@ -261,7 +261,7 @@ func (s *SymptomTestSuite) TestGetPersonalSymptomTimeSeriesData() {
 	s.Equal(expected, results)
 
 	// user A with timezone in UTC
-	results, err = store.GetPersonalSymptomTimeSeriesData("userA", start, end, "+00", "month")
+	results, err = store.GetPersonalSymptomTimeSeriesData("userA", start, end, "+00", schema.AggregationByMonth)
 	s.NoError(err)
 	expected = map[string][]schema.Bucket{
 		"cough": {
@@ -274,7 +274,7 @@ func (s *SymptomTestSuite) TestGetPersonalSymptomTimeSeriesData() {
 	s.Equal(expected, results)
 
 	// user A with timezone in UTC+8
-	results, err = store.GetPersonalSymptomTimeSeriesData("userA", start, end, "+08", "day")
+	results, err = store.GetPersonalSymptomTimeSeriesData("userA", start, end, "+08", schema.AggregationByDay)
 	s.NoError(err)
 	expected = map[string][]schema.Bucket{
 		"cough": {
@@ -291,7 +291,7 @@ func (s *SymptomTestSuite) TestGetPersonalSymptomTimeSeriesData() {
 	s.Equal(expected, results)
 
 	// user B with timezone in UTC
-	results, err = store.GetPersonalSymptomTimeSeriesData("userB", start, end, "+00", "day")
+	results, err = store.GetPersonalSymptomTimeSeriesData("userB", start, end, "+00", schema.AggregationByDay)
 	s.NoError(err)
 	expected = map[string][]schema.Bucket{
 		"loss_taste_smell": {
@@ -307,7 +307,7 @@ func (s *SymptomTestSuite) TestGetPersonalSymptomTimeSeriesData() {
 	s.Equal(expected, results)
 
 	// user B with timezone in UTC+8
-	results, err = store.GetPersonalSymptomTimeSeriesData("userB", start, end, "+08", "day")
+	results, err = store.GetPersonalSymptomTimeSeriesData("userB", start, end, "+08", schema.AggregationByDay)
 	s.NoError(err)
 	expected = map[string][]schema.Bucket{
 		"loss_taste_smell": {
