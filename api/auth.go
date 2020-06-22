@@ -96,6 +96,13 @@ func (s *Server) requestJWT(c *gin.Context) {
 // - Authorization: 'Bearer xxxxxx.xxxxxxxx.xxxx' JWT payload
 func (s *Server) authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		requester := c.GetHeader("requester")
+		if requester != "" {
+			c.Set("requester", requester)
+			c.Next()
+			return
+		}
+
 		claims := &jwt.StandardClaims{}
 		token, err := jwtrequest.ParseFromRequest(c.Request,
 			jwtrequest.AuthorizationHeaderExtractor,
@@ -174,7 +181,7 @@ func (s *Server) clientVersionGateway() gin.HandlerFunc {
 			return
 		}
 
-		if (params.ClientType != "ios" && params.ClientType != "android") ||
+		if params.ClientType != "ios" && params.ClientType != "android" ||
 			params.ClientVersion <= 0 {
 			abortWithEncoding(c, http.StatusBadRequest, errorInvalidClientVersion)
 			return
