@@ -20,13 +20,26 @@ const (
 
 // autonomyProfile is a routing to dispatch requests between current user profile or a POI profile
 func (s *Server) autonomyProfile(c *gin.Context) {
-	id := c.Param("poiID")
+	var params struct {
+		Me    bool   `form:"me"`
+		POIID string `form:"poi_id"`
+	}
 
-	if id == "me" {
-		s.currentAreaProfile(c)
+	if err := c.Bind(&params); err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
 		return
 	}
-	s.placeProfile(c)
+
+	if params.Me {
+		s.currentAreaProfile(c)
+		return
+	} else if params.POIID != "" {
+		s.placeProfile(c, params.POIID)
+		return
+	} else {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters)
+		return
+	}
 }
 
 func (s *Server) currentAreaProfile(c *gin.Context) {
@@ -99,7 +112,7 @@ func (s *Server) currentAreaProfile(c *gin.Context) {
 	})
 }
 
-func (s *Server) placeProfile(c *gin.Context) {
+func (s *Server) placeProfile(c *gin.Context, id string) {
 	accountNumber := c.GetString("requester")
 
 	profile, err := s.mongoStore.GetProfile(accountNumber)
@@ -108,7 +121,7 @@ func (s *Server) placeProfile(c *gin.Context) {
 		return
 	}
 
-	poiID, err := primitive.ObjectIDFromHex(c.Param("poiID"))
+	poiID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, fmt.Errorf("invalid POI ID"))
 		return

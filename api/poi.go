@@ -79,6 +79,22 @@ func (s *Server) addPOI(c *gin.Context) {
 	c.JSON(http.StatusOK, body)
 }
 
+func (s *Server) listOwnPOI(c *gin.Context) {
+	account, ok := c.MustGet("account").(*schema.Account)
+	if !ok {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer)
+		return
+	}
+	pois, err := s.mongoStore.ListPOI(account.AccountNumber)
+	if err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, pois)
+	return
+}
+
 func (s *Server) listPOI(c *gin.Context) {
 	account, ok := c.MustGet("account").(*schema.Account)
 	if !ok {
@@ -88,7 +104,6 @@ func (s *Server) listPOI(c *gin.Context) {
 
 	var params struct {
 		ResourceID string `form:"resource_id"`
-		OnlyMe     bool   `form:"me"`
 	}
 
 	if err := c.Bind(&params); err != nil {
@@ -96,16 +111,7 @@ func (s *Server) listPOI(c *gin.Context) {
 		return
 	}
 
-	if params.OnlyMe {
-		pois, err := s.mongoStore.ListPOI(account.AccountNumber)
-		if err != nil {
-			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-			return
-		}
-
-		c.JSON(http.StatusOK, pois)
-		return
-	} else if params.ResourceID != "" {
+	if params.ResourceID != "" {
 		location := account.Profile.State.LastLocation
 		if nil == location {
 			abortWithEncoding(c, http.StatusBadRequest, errorUnknownAccountLocation)

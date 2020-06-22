@@ -148,7 +148,11 @@ func (s *Server) setupRouter() *gin.Engine {
 		accountRoute.PATCH("/me", s.accountUpdateMetadata)
 		accountRoute.DELETE("/me", s.accountDelete)
 
-		accountRoute.PUT("/me/poi_order", s.updatePOIOrder)
+		accountRoute.POST("/me/pois", s.addPOI)
+		accountRoute.GET("/me/pois", s.listOwnPOI)
+		accountRoute.PATCH("/me/pois/:poiID", s.updatePOIAlias)
+		accountRoute.DELETE("/me/pois/:poiID", s.deletePOI)
+		accountRoute.PUT("/me/pois", s.updatePOIOrder)
 
 		accountRoute.GET("/me/profile_formula", s.getProfileFormula)
 		accountRoute.PUT("/me/profile_formula", s.updateProfileFormula)
@@ -195,12 +199,9 @@ func (s *Server) setupRouter() *gin.Engine {
 	poiRoute := apiRoute.Group("/points-of-interest")
 	poiRoute.Use(s.recognizeAccountMiddleware())
 	{
-		poiRoute.POST("", s.addPOI)
 		poiRoute.GET("", s.listPOI)
 		poiRoute.POST("/:poiID/resources", s.addPOIResources)
 		poiRoute.GET("/:poiID/resources", s.getPOIResources)
-		poiRoute.PATCH("/:poiID", s.updatePOIAlias)
-		poiRoute.DELETE("/:poiID", s.deletePOI)
 		poiRoute.PUT("/:poiID/resource-ratings", s.updatePOIRating)
 		poiRoute.GET("/:poiID/resource-ratings", s.getProfileRatings)
 	}
@@ -215,7 +216,7 @@ func (s *Server) setupRouter() *gin.Engine {
 	autonomyProfile := apiRoute.Group("/autonomy_profile")
 	autonomyProfile.Use(s.recognizeAccountMiddleware())
 	{
-		autonomyProfile.GET("/:poiID", s.autonomyProfile)
+		autonomyProfile.GET("", s.autonomyProfile)
 	}
 
 	apiRoute.POST("/scores", s.calculateScore)
