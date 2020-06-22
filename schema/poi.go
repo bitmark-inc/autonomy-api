@@ -35,12 +35,14 @@ type ProfilePOI struct {
 	PlaceType       string               `bson:"place_type" json:"place_type"`
 	Metric          Metric               `bson:"metric" json:"-"`
 	ResourceRatings ProfileRatingsMetric `bson:"resource_ratings" json:"-"`
-	UpdatedAt       time.Time            `bson:"updated_at" json:"updated_at"`
+	UpdatedAt       time.Time            `bson:"updated_at" json:"-"`
 }
 
 // POIDetail is a client response **ONLY** structure since the data come
 // from both schema Profile.PointsOfInterest & POI
 type POIDetail struct {
-	ProfilePOI `bson:",inline"`
-	Location   *Location `json:"location"`
+	ProfilePOI    `bson:",inline"`
+	Location      *Location `json:"location"`
+	Distance      *float64  `json:"distance,omitempty"`
+	ResourceScore *float64  `json:"resource_score,omitempty"`
 }

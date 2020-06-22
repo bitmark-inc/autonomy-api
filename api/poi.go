@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -12,71 +13,110 @@ import (
 	"github.com/bitmark-inc/autonomy-api/utils"
 )
 
-type userPOI struct {
-	ID        string           `json:"id"`
-	Alias     string           `json:"alias"`
-	Address   string           `json:"address"`
-	Location  *schema.Location `json:"location"`
-	Score     float64          `json:"score"`
-	Types     []string         `json:"types,omitempty"`
-	PlaceType string           `json:"place_type"`
-}
-
-type poiResponse struct {
-	ID            string          `json:"id"`
-	Alias         string          `json:"alias"`
-	Address       string          `json:"address"`
-	Location      schema.Location `json:"location"`
-	Score         float64         `json:"score"`
-	PlaceType     string          `json:"place_type"`
-	Distance      *float64        `json:"distance,omitempty"`
-	ResourceScore *float64        `json:"resource_score,omitempty"`
+type poiRequestBody struct {
+	ID       string           `json:"poi_id"`
+	Alias    string           `json:"alias"`
+	Address  string           `json:"address"`
+	Location *schema.Location `json:"location"`
+	Score    float64          `json:"score"`
+	Types    []string         `json:"types,omitempty"`
 }
 
 func (s *Server) addPOI(c *gin.Context) {
-	var body userPOI
-	if err := c.BindJSON(&body); err != nil {
-		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
-		return
-	}
-
-	if body.Location == nil {
-		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, fmt.Errorf("location not provided"))
-		return
-	}
-
 	account, ok := c.MustGet("account").(*schema.Account)
 	if !ok {
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer)
 		return
 	}
 
-	placeType := utils.ReadPlaceType(body.Types)
-
-	poi, err := s.mongoStore.AddPOI(account.AccountNumber, body.Alias, body.Address, placeType,
-		body.Location.Longitude, body.Location.Latitude)
-	if err != nil {
-		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+	var req poiRequestBody
+	if err := c.BindJSON(&req); err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
 		return
 	}
 
-	profile, err := s.mongoStore.GetProfile(account.AccountNumber)
-	if err != nil {
-		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-		return
-	}
+	if req.ID != "" {
+		poiID, err := primitive.ObjectIDFromHex(req.ID)
+		if err != nil {
+			abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
+			return
+		}
 
-	metric, err := s.mongoStore.SyncAccountPOIMetrics(account.AccountNumber, profile.ScoreCoefficient, poi.ID)
-	if err != nil {
-		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-		return
-	}
+		poi, err := s.mongoStore.GetPOI(poiID)
+		if err != nil {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+			return
+		}
 
-	body.ID = poi.ID.Hex()
-	body.Score = metric.Score
-	body.Types = nil
-	body.PlaceType = poi.PlaceType
-	c.JSON(http.StatusOK, body)
+		poiDesc := schema.ProfilePOI{
+			ID:        poi.ID,
+			Alias:     poi.Alias,
+			Address:   poi.Address,
+			PlaceType: poi.PlaceType,
+			UpdatedAt: time.Now().UTC(),
+		}
+
+		if err := s.mongoStore.AppendPOIToAccountProfile(account.AccountNumber, poiDesc); err != nil {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+			return
+		}
+
+		resp := schema.POIDetail{
+			ProfilePOI: schema.ProfilePOI{
+				ID:        poi.ID,
+				Alias:     poi.Alias,
+				Address:   poi.Address,
+				Score:     poi.Score,
+				PlaceType: poi.PlaceType,
+			},
+			Location: &schema.Location{
+				Longitude: poi.Location.Coordinates[0],
+				Latitude:  poi.Location.Coordinates[1],
+			},
+		}
+
+		c.JSON(http.StatusOK, resp)
+
+	} else {
+		if req.Location == nil {
+			abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, fmt.Errorf("location not provided"))
+			return
+		}
+
+		placeType := utils.ReadPlaceType(req.Types)
+
+		poi, err := s.mongoStore.AddPOI(account.AccountNumber, req.Alias, req.Address, placeType,
+			req.Location.Longitude, req.Location.Latitude)
+		if err != nil {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+			return
+		}
+
+		profile, err := s.mongoStore.GetProfile(account.AccountNumber)
+		if err != nil {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+			return
+		}
+
+		metric, err := s.mongoStore.SyncAccountPOIMetrics(account.AccountNumber, profile.ScoreCoefficient, poi.ID)
+		if err != nil {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+			return
+		}
+
+		resp := schema.POIDetail{
+			ProfilePOI: schema.ProfilePOI{
+				ID:        poi.ID,
+				Alias:     req.Alias,
+				Address:   req.Address,
+				Score:     metric.Score,
+				PlaceType: poi.PlaceType,
+			},
+			Location: req.Location,
+		}
+
+		c.JSON(http.StatusOK, resp)
+	}
 }
 
 func (s *Server) listOwnPOI(c *gin.Context) {
@@ -124,19 +164,21 @@ func (s *Server) listPOI(c *gin.Context) {
 			return
 		}
 
-		response := make([]poiResponse, len(pois))
+		response := make([]schema.POIDetail, len(pois))
 
 		for i, p := range pois {
-			response[i] = poiResponse{
-				ID:      p.ID.Hex(),
-				Address: p.Address,
-				Alias:   p.Alias,
-				Score:   p.Score,
-				Location: schema.Location{
+			response[i] = schema.POIDetail{
+				ProfilePOI: schema.ProfilePOI{
+					ID:        p.ID,
+					Address:   p.Address,
+					Alias:     p.Alias,
+					Score:     p.Score,
+					PlaceType: p.PlaceType,
+				},
+				Location: &schema.Location{
 					Longitude: p.Location.Coordinates[0],
 					Latitude:  p.Location.Coordinates[1],
 				},
-				PlaceType:     p.PlaceType,
 				Distance:      p.Distance,
 				ResourceScore: p.ResourceScore,
 			}
@@ -157,7 +199,7 @@ func (s *Server) updatePOIAlias(c *gin.Context) {
 		return
 	}
 
-	var body userPOI
+	var body poiRequestBody
 	if err := c.BindJSON(&body); err != nil {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
 		return
