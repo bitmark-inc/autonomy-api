@@ -85,6 +85,7 @@ func CalculateMetric(rawMetrics schema.Metric, coefficient *schema.ScoreCoeffici
 			metric.Details.Behaviors.ScoreYesterday,
 			metric.Details.Confirm.ScoreYesterday)
 	}
+	metric.ScoreDelta = ChangeRate(metric.Score, metric.ScoreYesterday)
 
 	return metric
 }
