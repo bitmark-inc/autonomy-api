@@ -582,8 +582,18 @@ func (m *mongoDB) UpdateProfilePOIRatingMetric(accountNumber string, poiID primi
 	if err != nil {
 		return err
 	}
-	if result.MatchedCount == 0 {
-		return errAccountNotFound
+	if result.MatchedCount == 0 { // insert the place as a non-monitored poi into user's profile
+		query = bson.M{"account_number": accountNumber}
+		profilePOI := schema.ProfilePOI{
+			ID:              poiID,
+			ResourceRatings: metric,
+			UpdatedAt:       time.Now().UTC(),
+			Monitored:       false,
+		}
+		update := bson.M{"$push": bson.M{"points_of_interest": profilePOI}}
+		if _, err := c.UpdateOne(ctx, query, update); err != nil {
+			return err
+		}
 	}
 
 	return nil
