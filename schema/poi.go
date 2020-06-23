@@ -36,6 +36,7 @@ type ProfilePOI struct {
 	Metric          Metric               `bson:"metric" json:"-"`
 	ResourceRatings ProfileRatingsMetric `bson:"resource_ratings" json:"-"`
 	UpdatedAt       time.Time            `bson:"updated_at" json:"-"`
+	Monitored       bool                 `bson:"monitored" json:"-"`
 }
 
 // POIDetail is a client response **ONLY** structure since the data come

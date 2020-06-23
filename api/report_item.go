@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -32,8 +33,8 @@ type reportItemQueryParams struct {
 	Scope       string                            `form:"scope"`
 	Type        string                            `form:"type"`
 	Granularity schema.AggregationTimeGranularity `form:"granularity"`
-	Start       int64                             `form:"start"`
-	End         int64                             `form:"end"`
+	Start       string                            `form:"start"`
+	End         string                            `form:"end"`
 	Language    string                            `form:"lang"`
 	PoiID       string                            `form:"poi_id"`
 }
@@ -42,7 +43,25 @@ type reportItem struct {
 	Name         string         `json:"name"`
 	Value        *int           `json:"value"`
 	ChangeRate   *float64       `json:"change_rate"`
-	Distribution map[string]int `json:"distribution,omitempty"`
+	Distribution map[string]int `json:"distribution"`
+}
+
+func (r *reportItem) MarshalJSON() ([]byte, error) {
+	distribution := map[string]int{}
+	if r.Distribution != nil {
+		distribution = r.Distribution
+	}
+	return json.Marshal(&struct {
+		Name         string         `json:"name"`
+		Value        *int           `json:"value"`
+		ChangeRate   *float64       `json:"change_rate"`
+		Distribution map[string]int `json:"distribution"`
+	}{
+		Name:         r.Name,
+		Value:        r.Value,
+		ChangeRate:   r.ChangeRate,
+		Distribution: distribution,
+	})
 }
 
 func (s *Server) getReportItems(c *gin.Context) {
@@ -57,21 +76,26 @@ func (s *Server) getReportItems(c *gin.Context) {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
 		return
 	}
-	currentPeriodStart := params.Start
-	currentPeriodEnd := params.End
-	previousPeriodStart := 2*params.Start - params.End
-	previousPeriodEnd := params.Start
-	localizer := utils.NewLocalizer(params.Language)
-
-	profile, err := s.mongoStore.GetProfile(account.AccountNumber)
+	start, err := time.Parse(time.RFC3339, params.Start)
 	if err != nil {
-		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
 		return
 	}
+	end, err := time.Parse(time.RFC3339, params.End)
+	if err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
+		return
+	}
+
+	currentPeriodStart := start.UTC().Unix()
+	currentPeriodEnd := end.UTC().Unix()
+	previousPeriodStart := 2*currentPeriodStart - currentPeriodEnd
+	previousPeriodEnd := currentPeriodStart
+	localizer := utils.NewLocalizer(params.Language)
+
 	utcOffset := "+0000"
-	tz := utils.GetLocation(profile.Timezone)
-	if tz != nil {
-		utcOffset = time.Now().In(tz).Format("-0700")
+	if start.Location() != nil {
+		utcOffset = time.Now().In(start.Location()).Format("-0700")
 	}
 
 	var profileID string
