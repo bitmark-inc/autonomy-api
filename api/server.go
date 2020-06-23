@@ -198,6 +198,7 @@ func (s *Server) setupRouter() *gin.Engine {
 	poiRoute := apiRoute.Group("/points-of-interest")
 	poiRoute.Use(s.recognizeAccountMiddleware())
 	{
+		poiRoute.POST("", s.addPOI)
 		poiRoute.GET("", s.listPOI)
 		poiRoute.POST("/:poiID/resources", s.addPOIResources)
 		poiRoute.GET("/:poiID/resources", s.getPOIResources)

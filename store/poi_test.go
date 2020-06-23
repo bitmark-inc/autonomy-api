@@ -368,19 +368,6 @@ func (s *POITestSuite) LoadGeocodingFixtures() ([]maps.GeocodingResult, error) {
 	return fixture.Results, nil
 }
 
-// TestAddPOIWithNonExistAccount tests adding a new poi by an account which is not existent
-func (s *POITestSuite) TestAddPOIWithNonExistAccount() {
-	store := NewMongoStore(s.mongoClient, s.testDBName)
-
-	s.mockResolver.EXPECT().
-		GetPoliticalInfo(gomock.AssignableToTypeOf(schema.Location{})).
-		Return(testLocation, nil)
-
-	poi, err := store.AddPOI("account-not-found-test-poi", "test-poi", "", utils.UnknownPlace, 120, 25)
-	s.EqualError(err, "fail to update poi into profile")
-	s.Nil(poi)
-}
-
 // TestAddPOI tests adding a new poi normally
 func (s *POITestSuite) TestAddPOI() {
 	ctx := context.Background()
@@ -390,7 +377,7 @@ func (s *POITestSuite) TestAddPOI() {
 		GetPoliticalInfo(gomock.AssignableToTypeOf(schema.Location{})).
 		Return(testLocation, nil)
 
-	poi, err := store.AddPOI("account-test-add-poi", "test-poi", "", utils.UnknownPlace, 120.1, 25.1)
+	poi, err := store.AddPOI("test-poi", "", utils.UnknownPlace, 120.1, 25.1)
 	s.NoError(err)
 	s.Equal("United States", poi.Country)
 	s.Equal("New York", poi.State)
@@ -399,14 +386,6 @@ func (s *POITestSuite) TestAddPOI() {
 	s.Equal([]float64{120.1, 25.1}, poi.Location.Coordinates)
 
 	count, err := s.testDatabase.Collection(schema.POICollection).CountDocuments(ctx, bson.M{"_id": poi.ID})
-	s.NoError(err)
-	s.Equal(int64(1), count)
-
-	count, err = s.testDatabase.Collection(schema.ProfileCollection).CountDocuments(context.Background(), bson.M{
-		"account_number":           "account-test-add-poi",
-		"points_of_interest.id":    poi.ID,
-		"points_of_interest.alias": "test-poi",
-	})
 	s.NoError(err)
 	s.Equal(int64(1), count)
 }
@@ -428,7 +407,7 @@ func (s *POITestSuite) TestAddExistentPOI() {
 	s.NoError(err)
 	s.Equal(int64(0), count)
 
-	poi, err := store.AddPOI("account-test-add-poi", "test-existent-poi", "", utils.UnknownPlace, existedPOI.Location.Coordinates[0], existedPOI.Location.Coordinates[1])
+	poi, err := store.AddPOI("test-existent-poi", "", utils.UnknownPlace, existedPOI.Location.Coordinates[0], existedPOI.Location.Coordinates[1])
 	s.NoError(err)
 	s.Equal("Taiwan", poi.Country)
 	s.Equal("", poi.State)
@@ -437,14 +416,6 @@ func (s *POITestSuite) TestAddExistentPOI() {
 	s.Equal([]float64{existedPOI.Location.Coordinates[0], existedPOI.Location.Coordinates[1]}, poi.Location.Coordinates)
 
 	count, err = s.testDatabase.Collection(schema.POICollection).CountDocuments(ctx, bson.M{"_id": existedPOIID})
-	s.NoError(err)
-	s.Equal(int64(1), count)
-
-	count, err = s.testDatabase.Collection(schema.ProfileCollection).CountDocuments(context.Background(), bson.M{
-		"account_number":           "account-test-add-poi",
-		"points_of_interest.id":    existedPOIID,
-		"points_of_interest.alias": "test-existent-poi",
-	})
 	s.NoError(err)
 	s.Equal(int64(1), count)
 }
@@ -468,7 +439,7 @@ func (s *POITestSuite) TestAddDuplicatedPOI() {
 	s.Equal(int64(1), count)
 
 	// use a different name to add an added poi
-	poi, err := store.AddPOI("account-test-add-poi", "test-duplicated-add-poi", "", utils.UnknownPlace, addedPOI.Location.Coordinates[0], addedPOI.Location.Coordinates[1])
+	poi, err := store.AddPOI("test-duplicated-add-poi", "", utils.UnknownPlace, addedPOI.Location.Coordinates[0], addedPOI.Location.Coordinates[1])
 	s.NoError(err)
 	s.Equal("Taiwan", poi.Country)
 	s.Equal("", poi.State)
