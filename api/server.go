@@ -116,6 +116,13 @@ func (s *Server) setupRouter() *gin.Engine {
 		Timeout:         10 * time.Second,
 	}))
 	r.Use(s.DumpRequest)
+	r.Use(cors.New(cors.Config{
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"},
+		AllowHeaders:     []string{"*"},
+		AllowCredentials: true,
+		AllowAllOrigins:  true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	webhookRoute := r.Group("/webhook")
 	webhookRoute.Use(logmodule.Ginrus("Webhook"))
@@ -124,7 +131,6 @@ func (s *Server) setupRouter() *gin.Engine {
 
 	apiRoute := r.Group("/api")
 	apiRoute.Use(logmodule.Ginrus("API"))
-	apiRoute.Use(cors.Default())
 	apiRoute.GET("/information", s.information)
 
 	// api route other than `/information` will apply the following middleware
@@ -182,14 +188,6 @@ func (s *Server) setupRouter() *gin.Engine {
 
 	metricRoute := r.Group("/metrics")
 	metricRoute.Use(logmodule.Ginrus("Metric"))
-	metricRoute.Use(cors.New(cors.Config{
-		AllowMethods:     []string{"GET"},
-		AllowHeaders:     []string{"Origin"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		AllowAllOrigins:  true,
-		MaxAge:           12 * time.Hour,
-	}))
 	metricRoute.Use(s.apikeyAuthentication(viper.GetString("server.apikey.metric")))
 	{
 		// What kind of metrics do we need?
