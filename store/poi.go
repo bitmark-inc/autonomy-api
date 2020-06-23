@@ -134,7 +134,7 @@ func getResourceList(lang string, important bool) ([]schema.Resource, error) {
 }
 
 type POI interface {
-	AddPOI(accountNumber string, alias, address, placeType string, lon, lat float64) (*schema.POI, error)
+	AddPOI(alias, address, placeType string, lon, lat float64) (*schema.POI, error)
 	ListPOI(accountNumber string) ([]schema.POIDetail, error)
 	ListPOIByResource(resourceID string, coordinates schema.Location) ([]schema.POI, error)
 
@@ -156,7 +156,7 @@ type POI interface {
 }
 
 // AddPOI inserts a new POI record if it doesn't exist and append it to user's profile
-func (m *mongoDB) AddPOI(accountNumber string, alias, address, placeType string, lon, lat float64) (*schema.POI, error) {
+func (m *mongoDB) AddPOI(alias, address, placeType string, lon, lat float64) (*schema.POI, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 
@@ -224,18 +224,6 @@ func (m *mongoDB) AddPOI(accountNumber string, alias, address, placeType string,
 			log.WithError(err).Error("fail to sync poi metrics")
 
 		}
-	}
-
-	poiDesc := schema.ProfilePOI{
-		ID:        poi.ID,
-		Alias:     alias,
-		Address:   address,
-		PlaceType: poi.PlaceType,
-		UpdatedAt: time.Now().UTC(),
-	}
-
-	if err := m.AppendPOIToAccountProfile(accountNumber, poiDesc); err != nil {
-		return nil, err
 	}
 
 	return &poi, nil

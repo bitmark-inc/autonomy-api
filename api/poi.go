@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -23,100 +22,25 @@ type poiRequestBody struct {
 }
 
 func (s *Server) addPOI(c *gin.Context) {
-	account, ok := c.MustGet("account").(*schema.Account)
-	if !ok {
-		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer)
-		return
-	}
-
 	var req poiRequestBody
 	if err := c.BindJSON(&req); err != nil {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
 		return
 	}
 
-	if req.ID != "" {
-		poiID, err := primitive.ObjectIDFromHex(req.ID)
-		if err != nil {
-			abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
-			return
-		}
-
-		poi, err := s.mongoStore.GetPOI(poiID)
-		if err != nil {
-			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-			return
-		}
-
-		poiDesc := schema.ProfilePOI{
-			ID:        poi.ID,
-			Alias:     poi.Alias,
-			Address:   poi.Address,
-			PlaceType: poi.PlaceType,
-			UpdatedAt: time.Now().UTC(),
-		}
-
-		if err := s.mongoStore.AppendPOIToAccountProfile(account.AccountNumber, poiDesc); err != nil {
-			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-			return
-		}
-
-		resp := schema.POIDetail{
-			ProfilePOI: schema.ProfilePOI{
-				ID:        poi.ID,
-				Alias:     poi.Alias,
-				Address:   poi.Address,
-				Score:     poi.Score,
-				PlaceType: poi.PlaceType,
-			},
-			Location: &schema.Location{
-				Longitude: poi.Location.Coordinates[0],
-				Latitude:  poi.Location.Coordinates[1],
-			},
-		}
-
-		c.JSON(http.StatusOK, resp)
-
-	} else {
-		if req.Location == nil {
-			abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, fmt.Errorf("location not provided"))
-			return
-		}
-
-		placeType := utils.ReadPlaceType(req.Types)
-
-		poi, err := s.mongoStore.AddPOI(account.AccountNumber, req.Alias, req.Address, placeType,
-			req.Location.Longitude, req.Location.Latitude)
-		if err != nil {
-			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-			return
-		}
-
-		profile, err := s.mongoStore.GetProfile(account.AccountNumber)
-		if err != nil {
-			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-			return
-		}
-
-		metric, err := s.mongoStore.SyncAccountPOIMetrics(account.AccountNumber, profile.ScoreCoefficient, poi.ID)
-		if err != nil {
-			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-			return
-		}
-
-		resp := schema.POIDetail{
-			ProfilePOI: schema.ProfilePOI{
-				ID:        poi.ID,
-				Alias:     req.Alias,
-				Address:   req.Address,
-				Score:     metric.Score,
-				PlaceType: poi.PlaceType,
-			},
-			Location: req.Location,
-		}
-
-		c.JSON(http.StatusOK, resp)
+	if req.Location == nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, fmt.Errorf("location not provided"))
+		return
 	}
+
+	placeType := utils.ReadPlaceType(req.Types)
+
+	_, err := s.mongoStore.AddPOI(req.Alias, req.Address, placeType, req.Location.Longitude, req.Location.Latitude)
+	if err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"result": "OK"})
 }
 
 func (s *Server) listOwnPOI(c *gin.Context) {
