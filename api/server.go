@@ -124,6 +124,7 @@ func (s *Server) setupRouter() *gin.Engine {
 
 	apiRoute := r.Group("/api")
 	apiRoute.Use(logmodule.Ginrus("API"))
+	apiRoute.Use(cors.Default())
 	apiRoute.GET("/information", s.information)
 
 	// api route other than `/information` will apply the following middleware
