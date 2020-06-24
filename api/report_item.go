@@ -86,6 +86,10 @@ func (s *Server) getReportItems(c *gin.Context) {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
 		return
 	}
+	if params.Granularity != schema.AggregationByMonth && params.Granularity != schema.AggregationByDay {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters)
+		return
+	}
 
 	currentPeriodStart := start.UTC().Unix()
 	currentPeriodEnd := end.UTC().Unix()
