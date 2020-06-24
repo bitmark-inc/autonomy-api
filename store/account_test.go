@@ -65,6 +65,10 @@ func (s *AccountTestSuite) LoadMongoDBFixtures() error {
 			ID:            "test-account-profile-id",
 			AccountNumber: "account-test",
 		},
+		schema.Profile{
+			ID:            "test-account-add-existent-poi-profile-id",
+			AccountNumber: "account-test-add-existent-poi",
+		},
 	}); err != nil {
 		return err
 	}
@@ -122,6 +126,79 @@ func (s *AccountTestSuite) TestAppendPOIToAccountProfile() {
 	})
 	s.NoError(err)
 	s.Equal(int64(1), count)
+}
+
+func (s *AccountTestSuite) TestAppendExistentPOIToAccountProfile() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+
+	accountNumber := "account-test-add-existent-poi"
+	firstPoiID := primitive.NewObjectID()
+	firstPoi := schema.ProfilePOI{
+		ID:      firstPoiID,
+		Alias:   "Bitmark Inc.",
+		Address: "489-1",
+	}
+
+	secondPoi := schema.ProfilePOI{
+		ID:      firstPoiID, // use the same POI id above
+		Alias:   "Meeting room",
+		Address: "491-1",
+	}
+
+	// add the first one
+	err := store.AppendPOIToAccountProfile(accountNumber, firstPoi)
+	s.NoError(err)
+	// add the second one
+	err = store.AppendPOIToAccountProfile(accountNumber, secondPoi)
+	s.NoError(err)
+
+	count, err := s.testDatabase.Collection(schema.ProfileCollection).CountDocuments(context.Background(), bson.M{
+		"account_number":           accountNumber,
+		"points_of_interest.id":    firstPoiID,
+		"points_of_interest.alias": firstPoi.Alias,
+	})
+	s.NoError(err)
+	s.Equal(int64(0), count)
+
+	count, err = s.testDatabase.Collection(schema.ProfileCollection).CountDocuments(context.Background(), bson.M{
+		"account_number":           accountNumber,
+		"points_of_interest.id":    firstPoiID,
+		"points_of_interest.alias": secondPoi.Alias,
+	})
+	s.NoError(err)
+	s.Equal(int64(1), count)
+
+	count, err = s.testDatabase.Collection(schema.ProfileCollection).CountDocuments(context.Background(), bson.M{
+		"account_number":     accountNumber,
+		"points_of_interest": bson.M{"$size": 1},
+	})
+	s.NoError(err)
+	s.Equal(int64(1), count)
+}
+
+func (s *AccountTestSuite) TestAppendPOIToNonExistentAccountProfile() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+
+	accountNumber := "account-not-existent"
+	firstPoiID := primitive.NewObjectID()
+	firstPoi := schema.ProfilePOI{
+		ID:      firstPoiID,
+		Alias:   "Bitmark Inc.",
+		Address: "489-1",
+	}
+
+	// add the first one
+	err := store.AppendPOIToAccountProfile(accountNumber, firstPoi)
+	s.Error(err)
+	s.EqualError(err, "fail to add POI into profile")
+
+	count, err := s.testDatabase.Collection(schema.ProfileCollection).CountDocuments(context.Background(), bson.M{
+		"account_number":           accountNumber,
+		"points_of_interest.id":    firstPoiID,
+		"points_of_interest.alias": firstPoi.Alias,
+	})
+	s.NoError(err)
+	s.Equal(int64(0), count)
 }
 
 // UpdateProfileIndividualMetric tests if the IndividualMetric

@@ -242,17 +242,33 @@ func (m *mongoDB) ListPOI(accountNumber string) ([]schema.POIDetail, error) {
 	var result struct {
 		Points []schema.POIDetail `bson:"points_of_interest"`
 	}
-	query := bson.M{"account_number": accountNumber}
-	if err := c.FindOne(ctx, query).Decode(&result); err != nil {
+
+	if err := c.FindOne(ctx,
+		bson.M{
+			"account_number":               accountNumber,
+			"points_of_interest.monitored": true,
+		},
+		options.FindOne().SetProjection(
+			bson.M{
+				"points_of_interest": 1,
+			}),
+	).Decode(&result); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return []schema.POIDetail{}, nil
+		}
 		return nil, err
 	}
-	if len(result.Points) == 0 { // user hasn't tracked any location yet
-		return []schema.POIDetail{}, nil
+
+	monitoredPoints := make([]schema.POIDetail, 0, len(result.Points))
+	for _, p := range result.Points {
+		if p.Monitored {
+			monitoredPoints = append(monitoredPoints, p)
+		}
 	}
 
 	// find scores
 	poiIDs := make([]primitive.ObjectID, 0)
-	for _, p := range result.Points {
+	for _, p := range monitoredPoints {
 		poiIDs = append(poiIDs, p.ID)
 	}
 
@@ -273,24 +289,24 @@ func (m *mongoDB) ListPOI(accountNumber string) ([]schema.POIDetail, error) {
 		return nil, err
 	}
 
-	if len(pois) != len(result.Points) {
+	if len(pois) != len(monitoredPoints) {
 		log.WithFields(log.Fields{
 			"pois":     pois,
-			"poi_desc": result.Points,
+			"poi_desc": monitoredPoints,
 		}).Error("poi data wrongly retrieved or removed")
 		return nil, fmt.Errorf("poi data wrongly retrieved or removed")
 	}
-	for i := range result.Points {
-		result.Points[i].Score = pois[i].Score
+	for i := range monitoredPoints {
+		monitoredPoints[i].Score = pois[i].Score
 		if l := pois[i].Location; l != nil {
-			result.Points[i].Location = &schema.Location{
+			monitoredPoints[i].Location = &schema.Location{
 				Longitude: l.Coordinates[0],
 				Latitude:  l.Coordinates[1],
 			}
 		}
 	}
 
-	return result.Points, nil
+	return monitoredPoints, nil
 }
 
 // ListPOIByResource returns all POI that satisfied following conditions:
@@ -494,8 +510,9 @@ func (m *mongoDB) UpdatePOIOrder(accountNumber string, poiOrder []string) error 
 		bson.D{
 			{"$addFields", bson.D{
 				{"points_of_interest.order", bson.D{
-					{"$switch", bson.D{{
-						"branches", poiCondition},
+					{"$switch", bson.D{
+						{"branches", poiCondition},
+						{"default", 1000},
 					}},
 				}},
 			}},
@@ -566,7 +583,9 @@ func (m *mongoDB) DeletePOI(accountNumber string, poiID primitive.ObjectID) erro
 		"account_number":        accountNumber,
 		"points_of_interest.id": poiID,
 	}
-	update := bson.M{"$pull": bson.M{"points_of_interest": bson.M{"id": poiID}}}
+	update := bson.M{"$set": bson.M{
+		"points_of_interest.$.monitored": false,
+	}}
 	if _, err := c.UpdateOne(ctx, query, update); err != nil {
 		return err
 	}

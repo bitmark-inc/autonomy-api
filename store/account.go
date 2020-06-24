@@ -316,29 +316,45 @@ func (m *mongoDB) AppendPOIToAccountProfile(accountNumber string, poiDesc schema
 
 	prefixedLog := log.WithField("prefix", mongoLogPrefix).WithField("account", accountNumber).WithField("poi_id", poiDesc.ID)
 
-	// don't do anything if the POI was added before
 	query := bson.M{
 		"account_number":        accountNumber,
 		"points_of_interest.id": poiDesc.ID,
 	}
-	count, err := c.CountDocuments(ctx, query)
-	if err != nil {
-		prefixedLog.WithError(err).Error("unable to query POI for this account")
-		return err
-	}
-	if count > 0 {
-		return nil
+
+	update := bson.M{
+		"$set": bson.M{
+			"points_of_interest.$.monitored":  true,
+			"points_of_interest.$.alias":      poiDesc.Alias,
+			"points_of_interest.$.address":    poiDesc.Address,
+			"points_of_interest.$.place_type": poiDesc.PlaceType,
+			"points_of_interest.$.score":      poiDesc.Score,
+		},
 	}
 
-	// add the POI if not added before
-	query = bson.M{"account_number": bson.M{"$eq": accountNumber}}
-	update := bson.M{"$push": bson.M{"points_of_interest": poiDesc}}
-	if r, err := c.UpdateOne(ctx, query, update); nil != err {
-		prefixedLog.WithError(err).Error("unable to add POI for this account")
+	result, err := c.UpdateOne(ctx, query, update)
+	if err != nil {
 		return err
-	} else {
-		if r.ModifiedCount != 1 {
-			return fmt.Errorf("fail to update poi into profile")
+	}
+
+	if result.MatchedCount == 0 {
+		prefixedLog.Info("try to append for non-existent poi")
+		query = bson.M{
+			"account_number": accountNumber,
+			"points_of_interest": bson.M{
+				"$not": bson.M{
+					"$elemMatch": bson.M{
+						"id": poiDesc.ID}}},
+		}
+		update := bson.M{"$push": bson.M{"points_of_interest": poiDesc}}
+
+		result, err := c.UpdateOne(ctx, query, update)
+		if nil != err {
+			prefixedLog.WithError(err).Error("unable to push POI into profile")
+			return err
+		}
+
+		if result.ModifiedCount != 1 {
+			return fmt.Errorf("fail to add POI into profile")
 		}
 	}
 

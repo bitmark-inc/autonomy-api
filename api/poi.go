@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -47,6 +48,52 @@ func (s *Server) addPOI(c *gin.Context) {
 		Address: poi.Address,
 		Score:   poi.Metric.Score,
 	})
+}
+
+func (s *Server) addOwnPOI(c *gin.Context) {
+	accountNumber := c.GetString("requester")
+
+	var req poiRequestBody
+	if err := c.BindJSON(&req); err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
+		return
+	}
+
+	poiID, err := primitive.ObjectIDFromHex(req.ID)
+	if err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, fmt.Errorf("invalid POI ID"))
+		return
+	}
+
+	poi, err := s.mongoStore.GetPOI(poiID)
+	if err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+
+	poiDesc := schema.ProfilePOI{
+		ID:        poi.ID,
+		Alias:     poi.Alias,
+		Address:   poi.Address,
+		PlaceType: poi.PlaceType,
+		Monitored: true,
+		UpdatedAt: time.Now().UTC(),
+	}
+
+	if err := s.mongoStore.AppendPOIToAccountProfile(accountNumber, poiDesc); err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+
+	resp := schema.POIDetail{
+		ProfilePOI: poiDesc,
+		Location: &schema.Location{
+			Longitude: poi.Location.Coordinates[0],
+			Latitude:  poi.Location.Coordinates[1],
+		},
+	}
+
+	c.JSON(http.StatusOK, resp)
 }
 
 func (s *Server) listOwnPOI(c *gin.Context) {

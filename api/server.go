@@ -155,7 +155,7 @@ func (s *Server) setupRouter() *gin.Engine {
 		accountRoute.PATCH("/me", s.accountUpdateMetadata)
 		accountRoute.DELETE("/me", s.accountDelete)
 
-		accountRoute.POST("/me/pois", s.addPOI)
+		accountRoute.POST("/me/pois", s.addOwnPOI)
 		accountRoute.GET("/me/pois", s.listOwnPOI)
 		accountRoute.PATCH("/me/pois/:poiID", s.updatePOIAlias)
 		accountRoute.DELETE("/me/pois/:poiID", s.deletePOI)

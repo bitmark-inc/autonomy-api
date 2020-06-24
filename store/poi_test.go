@@ -274,8 +274,14 @@ func (s *POITestSuite) LoadMongoDBFixtures() error {
 			AccountNumber: "account-test-one-poi",
 			PointsOfInterest: []schema.ProfilePOI{
 				{
-					ID:    addedPOIID,
-					Alias: originAlias,
+					ID:        addedPOIID,
+					Alias:     originAlias,
+					Monitored: true,
+				},
+				{
+					ID:        addedPOIID2,
+					Alias:     originAlias,
+					Monitored: false,
 				},
 			},
 		},
@@ -303,12 +309,14 @@ func (s *POITestSuite) LoadMongoDBFixtures() error {
 			AccountNumber: "account-test-delete-poi",
 			PointsOfInterest: []schema.ProfilePOI{
 				{
-					ID:    addedPOIID,
-					Alias: originAlias,
+					ID:        addedPOIID,
+					Alias:     originAlias,
+					Monitored: true,
 				},
 				{
-					ID:    addedPOIID2,
-					Alias: originAlias,
+					ID:        addedPOIID2,
+					Alias:     originAlias,
+					Monitored: true,
 				},
 			},
 		},
@@ -558,11 +566,12 @@ func (s *POITestSuite) TestUpdatePOIOrderWithWrongID() {
 	s.EqualError(err, primitive.ErrInvalidHex.Error())
 }
 
+// TestUpdatePOIOrderMismatch tests if we try to re-order non-existent. There will nothing happen.
 func (s *POITestSuite) TestUpdatePOIOrderMismatch() {
 	store := NewMongoStore(s.mongoClient, s.testDBName)
 
 	err := store.UpdatePOIOrder("account-test-poi-reorder", []string{addedPOIID.Hex()})
-	s.EqualError(err, ErrPOIListMismatch.Error())
+	s.NoError(err)
 }
 
 func (s *POITestSuite) TestUpdatePOIOrderForAccountWithoutAnyPOI() {
@@ -588,8 +597,11 @@ func (s *POITestSuite) TestDeletePOI() {
 		"account_number": "account-test-delete-poi",
 	}, options.FindOne().SetProjection(bson.M{"points_of_interest": 1})).Decode(&profile)
 	s.NoError(err)
-	s.Len(profile.PointsOfInterest, 1)
-	s.Equal(addedPOIID2, profile.PointsOfInterest[0].ID)
+	s.Len(profile.PointsOfInterest, 2)
+	s.Equal(addedPOIID, profile.PointsOfInterest[0].ID)
+	s.False(profile.PointsOfInterest[0].Monitored)
+	s.Equal(addedPOIID2, profile.PointsOfInterest[1].ID)
+	s.True(profile.PointsOfInterest[1].Monitored)
 
 	s.NoError(store.DeletePOI("account-test-delete-poi", addedPOIID2))
 
@@ -597,7 +609,7 @@ func (s *POITestSuite) TestDeletePOI() {
 		"account_number": "account-test-delete-poi",
 	}, options.FindOne().SetProjection(bson.M{"points_of_interest": 1})).Decode(&profile)
 	s.NoError(err)
-	s.Len(profile.PointsOfInterest, 0)
+	s.Len(profile.PointsOfInterest, 2) // does not remove from profile
 }
 
 func (s *POITestSuite) TestDeletePOINonexistentPOI() {
