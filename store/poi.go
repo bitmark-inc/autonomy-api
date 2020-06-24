@@ -199,6 +199,8 @@ func (m *mongoDB) AddPOI(alias, address, placeType string, lon, lat float64) (*s
 				return nil, err
 			}
 			poi.ID = result.InsertedID.(primitive.ObjectID)
+			poi.Address = address
+			poi.Alias = alias
 			poi.Country = location.Country
 			poi.State = location.State
 			poi.County = location.County

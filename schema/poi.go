@@ -32,7 +32,7 @@ type ProfilePOI struct {
 	Alias           string               `bson:"alias" json:"alias"`
 	Address         string               `bson:"address" json:"address"`
 	Score           float64              `bson:"score" json:"score"`
-	PlaceType       string               `bson:"place_type" json:"place_type"`
+	PlaceType       string               `bson:"place_type" json:"-"`
 	Metric          Metric               `bson:"metric" json:"-"`
 	ResourceRatings ProfileRatingsMetric `bson:"resource_ratings" json:"-"`
 	UpdatedAt       time.Time            `bson:"updated_at" json:"-"`

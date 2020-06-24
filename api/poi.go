@@ -35,12 +35,18 @@ func (s *Server) addPOI(c *gin.Context) {
 
 	placeType := utils.ReadPlaceType(req.Types)
 
-	_, err := s.mongoStore.AddPOI(req.Alias, req.Address, placeType, req.Location.Longitude, req.Location.Latitude)
+	poi, err := s.mongoStore.AddPOI(req.Alias, req.Address, placeType, req.Location.Longitude, req.Location.Latitude)
 	if err != nil {
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"result": "OK"})
+
+	c.JSON(http.StatusOK, schema.ProfilePOI{
+		ID:      poi.ID,
+		Alias:   poi.Alias,
+		Address: poi.Address,
+		Score:   poi.Metric.Score,
+	})
 }
 
 func (s *Server) listOwnPOI(c *gin.Context) {
