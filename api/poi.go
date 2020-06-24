@@ -42,11 +42,14 @@ func (s *Server) addPOI(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, schema.ProfilePOI{
-		ID:      poi.ID,
-		Alias:   poi.Alias,
-		Address: poi.Address,
-		Score:   poi.Metric.Score,
+	c.JSON(http.StatusOK, schema.POIDetail{
+		ProfilePOI: schema.ProfilePOI{
+			ID:      poi.ID,
+			Alias:   poi.Alias,
+			Address: poi.Address,
+			Score:   poi.Metric.Score,
+		},
+		Location: req.Location,
 	})
 }
 
