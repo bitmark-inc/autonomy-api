@@ -182,6 +182,9 @@ func summarizePlaceProfile(poi *schema.POI, profile *schema.Profile, language st
 	}
 
 	resp.ID = poi.ID.Hex()
+	resp.Alias = poi.Alias
+	resp.Address = poi.Address
+
 	if profilePOI != nil {
 		resp.Alias = profilePOI.Alias
 		resp.Address = profilePOI.Address
