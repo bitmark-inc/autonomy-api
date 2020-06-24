@@ -274,11 +274,11 @@ func (s *BehaviorTestSuite) TestGetPersonalBehaviorTimeSeriesData() {
 	expected := map[string][]schema.Bucket{
 		"clean_hand": {
 			{Name: "2020-05-25", Value: 1},
-			{Name: "2020-05-26", Value: 1},
+			{Name: "2020-05-26", Value: 2},
 		},
 		"social_distancing": {
 			{Name: "2020-05-25", Value: 1},
-			{Name: "2020-05-26", Value: 1},
+			{Name: "2020-05-26", Value: 2},
 		},
 	}
 	s.Equal(expected, results)
@@ -288,10 +288,10 @@ func (s *BehaviorTestSuite) TestGetPersonalBehaviorTimeSeriesData() {
 	s.NoError(err)
 	expected = map[string][]schema.Bucket{
 		"clean_hand": {
-			{Name: "2020-05", Value: 2},
+			{Name: "2020-05", Value: 3},
 		},
 		"social_distancing": {
-			{Name: "2020-05", Value: 2},
+			{Name: "2020-05", Value: 3},
 		},
 	}
 	s.Equal(expected, results)
@@ -321,7 +321,7 @@ func (s *BehaviorTestSuite) TestGetPersonalBehaviorTimeSeriesData() {
 			{Name: "2020-05-26", Value: 1},
 		},
 		"new_behavior": {
-			{Name: "2020-05-26", Value: 1},
+			{Name: "2020-05-26", Value: 2},
 		},
 	}
 	s.Equal(expected, results)

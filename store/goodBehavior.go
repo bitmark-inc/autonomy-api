@@ -414,7 +414,6 @@ func (m *mongoDB) GetBehaviorCount(profileID string, loc *schema.Location, dist 
 
 // GetPersonalBehaviorTimeSeriesData returns the number of reported behaviors
 // for each time interval (determined by `granularity`) in the specified time range (determined by `start` and `end`).
-// Duplicated items in a day are counted as one.
 func (m *mongoDB) GetPersonalBehaviorTimeSeriesData(profileID string, start, end int64, utcOffset string, granularity schema.AggregationTimeGranularity) (map[string][]schema.Bucket, error) {
 	c := m.client.Database(m.database).Collection(schema.BehaviorReportCollection)
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
@@ -461,34 +460,17 @@ func (m *mongoDB) GetPersonalBehaviorTimeSeriesData(profileID string, start, end
 			},
 		},
 		{
-			"$group": bson.M{
-				"_id": bson.M{
-					"profile_id": "$profile_id",
-					"date":       "$date",
-				},
-				"behaviors": bson.M{
-					"$addToSet": "$behaviors._id",
-				},
-			},
-		},
-		{
-			"$unwind": bson.M{
-				"path":                       "$behaviors",
-				"preserveNullAndEmptyArrays": false,
-			},
-		},
-		{
 			"$project": bson.M{
-				"_id":          0,
-				"behaviors_id": "$behaviors",
-				"bucket_name":  bson.M{"$substr": bson.A{"$_id.date", 0, dateStringLength}},
+				"_id":         0,
+				"behavior_id": "$behaviors._id",
+				"bucket_name": bson.M{"$substr": bson.A{"$date", 0, dateStringLength}},
 			},
 		},
 		{
 			"$group": bson.M{
 				"_id": bson.M{
-					"behaviors_id": "$behaviors_id",
-					"bucket_name":  "$bucket_name",
+					"behavior_id": "$behavior_id",
+					"bucket_name": "$bucket_name",
 				},
 				"count": bson.M{
 					"$sum": 1,
@@ -502,7 +484,7 @@ func (m *mongoDB) GetPersonalBehaviorTimeSeriesData(profileID string, start, end
 		},
 		{
 			"$group": bson.M{
-				"_id": "$_id.behaviors_id",
+				"_id": "$_id.behavior_id",
 				"buckets": bson.M{
 					"$push": bson.M{
 						"name":  "$_id.bucket_name",
