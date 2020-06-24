@@ -28,6 +28,7 @@ var updatePOIID = primitive.NewObjectID()
 var addedPOIID = primitive.NewObjectID()
 var addedPOIID2 = primitive.NewObjectID()
 var existedPOIID = primitive.NewObjectID()
+var emptyAliasAddrPOIID = primitive.NewObjectID()
 var noCountryPOIID = primitive.NewObjectID()
 var metricPOIID = primitive.NewObjectID()
 var noResourcesPOIID = primitive.NewObjectID()
@@ -97,10 +98,24 @@ var (
 	}
 
 	existedPOI = schema.POI{
-		ID: existedPOIID,
+		ID:      existedPOIID,
+		Alias:   "existedPOI",
+		Address: "address",
 		Location: &schema.GeoJSON{
 			Type:        "Point",
 			Coordinates: []float64{120.12, 25.12},
+		},
+		Country:   "Taiwan",
+		State:     "",
+		County:    "Yilan County",
+		PlaceType: "unknown",
+	}
+
+	emptyAliasAddrPOI = schema.POI{
+		ID: emptyAliasAddrPOIID,
+		Location: &schema.GeoJSON{
+			Type:        "Point",
+			Coordinates: []float64{120.12998, 25.12998},
 		},
 		Country:   "Taiwan",
 		State:     "",
@@ -340,6 +355,7 @@ func (s *POITestSuite) LoadMongoDBFixtures() error {
 		addedPOI,
 		addedPOI2,
 		existedPOI,
+		emptyAliasAddrPOI,
 		metricPOI,
 		noResourcesPOI,
 		noResourcesPOI2,
@@ -408,29 +424,24 @@ func (s *POITestSuite) TestAddExistentPOI() {
 		GetPoliticalInfo(gomock.AssignableToTypeOf(schema.Location{})).
 		Return(testLocation, nil)
 
-	count, err := s.testDatabase.Collection(schema.ProfileCollection).CountDocuments(context.Background(), bson.M{
-		"account_number":        "account-test-add-poi",
-		"points_of_interest.id": existedPOIID,
-	})
+	poi, err := store.AddPOI("any", "any", utils.UnknownPlace, existedPOI.Location.Coordinates[0], existedPOI.Location.Coordinates[1])
 	s.NoError(err)
-	s.Equal(int64(0), count)
-
-	poi, err := store.AddPOI("test-existent-poi", "", utils.UnknownPlace, existedPOI.Location.Coordinates[0], existedPOI.Location.Coordinates[1])
-	s.NoError(err)
+	s.Equal("existedPOI", poi.Alias)
+	s.Equal("address", poi.Address)
 	s.Equal("Taiwan", poi.Country)
 	s.Equal("", poi.State)
 	s.Equal("Yilan County", poi.County)
 	s.Equal(utils.UnknownPlace, poi.PlaceType)
 	s.Equal([]float64{existedPOI.Location.Coordinates[0], existedPOI.Location.Coordinates[1]}, poi.Location.Coordinates)
 
-	count, err = s.testDatabase.Collection(schema.POICollection).CountDocuments(ctx, bson.M{"_id": existedPOIID})
+	count, err := s.testDatabase.Collection(schema.POICollection).CountDocuments(ctx, bson.M{"_id": existedPOIID})
 	s.NoError(err)
 	s.Equal(int64(1), count)
 }
 
-// TestAddDuplicatedPOI tests adding a duplicated poi where its coordinates has alreday existed
-// for the test account
-func (s *POITestSuite) TestAddDuplicatedPOI() {
+// TestAddPOIUpdateAliasIfEmpty tests adding a duplicated poi where its coordinates has alreday existed
+// If the target POI's alias or address is empty, it will be replaced.
+func (s *POITestSuite) TestAddPOIUpdateAliasIfEmpty() {
 	ctx := context.Background()
 	store := NewMongoStore(s.mongoClient, s.testDBName)
 
@@ -438,35 +449,20 @@ func (s *POITestSuite) TestAddDuplicatedPOI() {
 		GetPoliticalInfo(gomock.AssignableToTypeOf(schema.Location{})).
 		Return(testLocation, nil)
 
-		// poi is not in the profile at beginning
-	count, err := s.testDatabase.Collection(schema.ProfileCollection).CountDocuments(context.Background(), bson.M{
-		"account_number":        "account-test-add-poi",
-		"points_of_interest.id": addedPOIID,
-	})
-	s.NoError(err)
-	s.Equal(int64(1), count)
-
 	// use a different name to add an added poi
-	poi, err := store.AddPOI("test-duplicated-add-poi", "", utils.UnknownPlace, addedPOI.Location.Coordinates[0], addedPOI.Location.Coordinates[1])
+	poi, err := store.AddPOI("new-name", "new-address", utils.UnknownPlace, emptyAliasAddrPOI.Location.Coordinates[0], emptyAliasAddrPOI.Location.Coordinates[1])
 	s.NoError(err)
 	s.Equal("Taiwan", poi.Country)
 	s.Equal("", poi.State)
 	s.Equal("Yilan County", poi.County)
 	s.Equal(utils.UnknownPlace, poi.PlaceType)
-	s.Equal([]float64{addedPOI.Location.Coordinates[0], addedPOI.Location.Coordinates[1]}, poi.Location.Coordinates)
+	s.Equal([]float64{emptyAliasAddrPOI.Location.Coordinates[0], emptyAliasAddrPOI.Location.Coordinates[1]}, poi.Location.Coordinates)
 
-	count, err = s.testDatabase.Collection(schema.POICollection).CountDocuments(ctx, bson.M{"_id": addedPOIID})
+	var dbPOI schema.POI
+	err = s.testDatabase.Collection(schema.POICollection).FindOne(ctx, bson.M{"_id": emptyAliasAddrPOIID}).Decode(&dbPOI)
 	s.NoError(err)
-	s.Equal(int64(1), count)
-
-	// the alias of the added poi will not updated
-	count, err = s.testDatabase.Collection(schema.ProfileCollection).CountDocuments(context.Background(), bson.M{
-		"account_number":           "account-test-add-poi",
-		"points_of_interest.id":    addedPOIID,
-		"points_of_interest.alias": originAlias,
-	})
-	s.NoError(err)
-	s.Equal(int64(1), count)
+	s.Equal("new-name", dbPOI.Alias)
+	s.Equal("new-address", dbPOI.Address)
 }
 
 // TestListPOIForUserWithoutAny tests listing all POIs from db

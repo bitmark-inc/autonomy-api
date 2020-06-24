@@ -210,6 +210,20 @@ func (m *mongoDB) AddPOI(alias, address, placeType string, lon, lat float64) (*s
 		}
 	}
 
+	r, err := c.UpdateOne(ctx, bson.M{
+		"_id": poi.ID,
+		"$or": bson.A{bson.M{"alias": ""}, bson.M{"address": ""}}},
+		bson.M{"$set": bson.M{"alias": alias, "address": address}},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if r.ModifiedCount == 1 {
+		poi.Alias = alias
+		poi.Address = address
+	}
+
 	if time.Since(time.Unix(poi.Metric.LastUpdate, 0)) > metricUpdateInterval {
 		newMetric, err := m.SyncPOIMetrics(poi.ID, poi.ResourceRatings.Resources, schema.Location{
 			Latitude:  lat,
