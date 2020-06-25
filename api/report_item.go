@@ -40,6 +40,7 @@ type reportItemQueryParams struct {
 }
 
 type reportItem struct {
+	ID           string         `json:"id"`
 	Name         string         `json:"name"`
 	Value        *int           `json:"value"`
 	ChangeRate   *float64       `json:"change_rate"`
@@ -52,11 +53,13 @@ func (r *reportItem) MarshalJSON() ([]byte, error) {
 		distribution = r.Distribution
 	}
 	return json.Marshal(&struct {
+		ID           string         `json:"id"`
 		Name         string         `json:"name"`
 		Value        *int           `json:"value"`
 		ChangeRate   *float64       `json:"change_rate"`
 		Distribution map[string]int `json:"distribution"`
 	}{
+		ID:           r.ID,
 		Name:         r.Name,
 		Value:        r.Value,
 		ChangeRate:   r.ChangeRate,
@@ -321,7 +324,7 @@ func gatherReportItems(currentDistribution, previousDistribution map[string]int)
 		// If it's also reported in the previous period, the rate will be adjusted accordingly.
 		v := value
 		changeRate := 100.0
-		items[itemID] = &reportItem{Value: &v, ChangeRate: &changeRate}
+		items[itemID] = &reportItem{ID: itemID, Value: &v, ChangeRate: &changeRate}
 	}
 	for itemID, value := range previousDistribution {
 		if _, ok := items[itemID]; ok { // reported both in the current and previous periods
@@ -330,7 +333,7 @@ func gatherReportItems(currentDistribution, previousDistribution map[string]int)
 		} else { // only reported in the previous period
 			v := 0
 			changeRate := -100.0
-			items[itemID] = &reportItem{Value: &v, ChangeRate: &changeRate}
+			items[itemID] = &reportItem{ID: itemID, Value: &v, ChangeRate: &changeRate}
 		}
 	}
 	return items
@@ -358,7 +361,7 @@ func gatherReportItemsWithDistribution(currentBuckets map[string][]schema.Bucket
 			value = sum / len(distribution)
 		}
 		changeRate := 100.0
-		items[itemID] = &reportItem{Value: &value, ChangeRate: &changeRate, Distribution: distribution}
+		items[itemID] = &reportItem{ID: itemID, Value: &value, ChangeRate: &changeRate, Distribution: distribution}
 	}
 	for itemID, value := range previousDistribution {
 		if _, ok := items[itemID]; ok { // reported both in the current and previous periods
@@ -367,7 +370,7 @@ func gatherReportItemsWithDistribution(currentBuckets map[string][]schema.Bucket
 		} else { // only reported in the previous period
 			v := 0
 			changeRate := -100.0
-			items[itemID] = &reportItem{Value: &v, ChangeRate: &changeRate}
+			items[itemID] = &reportItem{ID: itemID, Value: &v, ChangeRate: &changeRate}
 		}
 	}
 	return items
