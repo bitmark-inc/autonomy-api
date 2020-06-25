@@ -185,7 +185,7 @@ func summarizePlaceProfile(poi *schema.POI, profile *schema.Profile, language st
 	resp.Alias = poi.Alias
 	resp.Address = poi.Address
 
-	if profilePOI != nil {
+	if profilePOI != nil && profilePOI.Monitored {
 		resp.Alias = profilePOI.Alias
 		resp.Address = profilePOI.Address
 		resp.Owned = true
