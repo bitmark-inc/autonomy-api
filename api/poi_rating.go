@@ -92,7 +92,6 @@ func (s *Server) getProfileRatings(c *gin.Context) {
 	}
 	metric, err := s.mongoStore.GetProfilePOIRatingMetric(account.AccountNumber, poiID)
 	if err != nil {
-		c.Error(err)
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 		return
 	}
@@ -102,6 +101,7 @@ func (s *Server) getProfileRatings(c *gin.Context) {
 	if err != nil {
 		c.Error(fmt.Errorf("GetPOIResourceMetric:%v", getPoiErr))
 		c.JSON(http.StatusOK, gin.H{"ratings": metric.Resources})
+		return
 	}
 
 	profileMap := make(map[string]schema.RatingResource)

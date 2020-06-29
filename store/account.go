@@ -624,9 +624,11 @@ func (m *mongoDB) GetProfilePOIRatingMetric(accountNumber string, id string) (sc
 	defer cancel()
 	log.WithField("prefix", mongoLogPrefix).Debugf("get accounts:%s by POI id:%s", accountNumber, id)
 
-	filter := bson.D{{"account_number", accountNumber}, {}}
+	filter := bson.D{{"account_number", accountNumber}}
 	var result schema.Profile
-	err := c.FindOne(ctx, filter).Decode(&result)
+	err := c.FindOne(ctx, filter, options.FindOne().SetProjection(bson.M{
+		"points_of_interest": 1,
+	})).Decode(&result)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"prefix":         mongoLogPrefix,
@@ -641,7 +643,7 @@ func (m *mongoDB) GetProfilePOIRatingMetric(accountNumber string, id string) (sc
 		}
 	}
 
-	return schema.ProfileRatingsMetric{}, ErrPOINotFound
+	return schema.ProfileRatingsMetric{}, nil
 }
 func (m *mongoDB) GetProfilesRatingMetricByPOI(account string, poiID primitive.ObjectID) (schema.ProfileRatingsMetric, error) {
 	log.WithField("prefix", mongoLogPrefix).Debugf("get accounts by POI id: %s", poiID.Hex())
