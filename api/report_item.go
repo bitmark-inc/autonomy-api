@@ -385,7 +385,13 @@ func getReportItemsForDisplay(entries map[string]*reportItem, getNameFunc func(s
 		results = append(results, entry)
 	}
 	sort.SliceStable(results, func(i, j int) bool {
-		return *results[i].Value > *results[j].Value
+		if *results[i].Value > *results[j].Value {
+			return true
+		}
+		if *results[i].Value < *results[j].Value {
+			return false
+		}
+		return results[i].Name < results[j].Name
 	})
 	return results
 }
