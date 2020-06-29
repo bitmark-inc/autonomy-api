@@ -746,7 +746,7 @@ func (m *mongoDB) AddPOIResources(poiID primitive.ObjectID, resources []schema.R
 			}
 		} else if resource.Name != "" {
 			h := sha256.New()
-			h.Write([]byte(fmt.Sprintf("%s=:=", resource.Name)))
+			h.Write([]byte(fmt.Sprintf("%s=:=", strings.ToLower(resource.Name))))
 			resource.ID = hex.EncodeToString(h.Sum(nil))
 		} else {
 			return nil, fmt.Errorf("the id and name of resource should not be both empty (what is this?)")
