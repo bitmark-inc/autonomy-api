@@ -290,259 +290,257 @@ conditions:
 
 resources:
   resource_1:
-    name: Wearing face coverings
+    name: wearing face coverings
   resource_2:
-    name: Wearing gloves
+    name: wearing gloves
   resource_3:
-    name: Temperature checks
+    name: temperature checks
   resource_4:
-    name: Hand sanitizer
+    name: hand sanitizer
   resource_5:
-    name: Surfaces disinfected
+    name: surfaces disinfected
   resource_6:
-    name: Hand-washing facilities
+    name: hand-washing facilities
   resource_7:
-    name: Clean restrooms
+    name: clean restrooms
   resource_8:
-    name: Social distancing measures
+    name: social distancing measures
   resource_9:
-    name: Good air circulation
+    name: good air circulation
   resource_10:
-    name: Whole (unprocessed) foods diet
+    name: whole (unprocessed) foods diet
   resource_11:
-    name: Mediterranean diet
+    name: mediterranean diet
   resource_12:
-    name: Paleo diet
+    name: paleo diet
   resource_13:
-    name: Vegan/plant-based diet
+    name: vegan/plant-based diet
   resource_14:
-    name: Vegetarian diet
+    name: vegetarian diet
   resource_15:
-    name: Gluten-free diet
+    name: gluten-free diet
   resource_16:
     name: DASH
   resource_17:
-    name: Zone diet
+    name: zone diet
   resource_18:
-    name: Flexitarian diet
+    name: flexitarian diet
   resource_19:
-    name: Weight Watchers (WW) diet
+    name: weight Watchers (WW) diet
   resource_20:
-    name: Mayo Clinic diet
+    name: mayo Clinic diet
   resource_21:
     name: MIND
   resource_22:
-    name: Volumetrics
+    name: volumetrics
   resource_23:
-    name: Ornish diet
+    name: ornish diet
   resource_24:
     name: TLC diet
   resource_25:
-    name: Anti-Inflammatory diet
+    name: anti-inflammatory diet
   resource_26:
-    name: Nordic diet
+    name: nordic diet
   resource_27:
-    name: No-trans fat diet
+    name: no-trans fat diet
   resource_28:
-    name: Low glycemic index (low GI)
+    name: low glycemic index (low GI)
   resource_29:
-    name: Low-fat diet
+    name: low-fat diet
   resource_30:
-    name: Low-sodium diet
+    name: low-sodium diet
   resource_31:
-    name: Dairy-free / lactose-free
+    name: dairy-free / lactose-free
   resource_32:
-    name: Raw food diet
+    name: raw food diet
   resource_33:
-    name: Low-carb diet
+    name: low-carb diet
   resource_34:
-    name: No carbs no sugar diet
+    name: no carbs no sugar diet
   resource_35:
-    name: Ketogenic diet
+    name: ketogenic diet
   resource_36:
-    name: Vitamin D
+    name: vitamin D
   resource_37:
-    name: Calcium
+    name: calcium
   resource_38:
-    name: Fish oil
+    name: fish oil
   resource_39:
-    name: Fish oil (omega-3 fatty acids)
+    name: fish oil (omega-3 fatty acids)
   resource_40:
-    name: Flaxseed (omega-3 fatty acids)
+    name: flaxseed (omega-3 fatty acids)
   resource_41:
-    name: Fiber
+    name: fiber
   resource_42:
-    name: Selenium
+    name: selenium
   resource_43:
-    name: Prebiotics
+    name: prebiotics
   resource_44:
-    name: Probiotics
+    name: probiotics
   resource_45:
-    name: Intermittent fasting
+    name: intermittent fasting
   resource_46:
-    name: Fasting
+    name: fasting
   resource_47:
-    name: American football
+    name: american football
   resource_48:
-    name: Archery
+    name: archery
   resource_49:
-    name: Australian football
+    name: australian football
   resource_50:
-    name: Badminton
+    name: badminton
   resource_51:
-    name: Barre
+    name: barre
   resource_52:
-    name: Baseball
+    name: baseball
   resource_53:
-    name: Basketball
+    name: basketball
   resource_54:
-    name: Bowling
+    name: bowling
   resource_55:
-    name: Boxing
+    name: boxing
   resource_56:
-    name: Climbing
+    name: climbing
   resource_57:
-    name: Core training
+    name: core training
   resource_58:
-    name: Cricket
+    name: cricket
   resource_59:
-    name: Cross-country skiing
+    name: cross-country skiing
   resource_60:
-    name: Cross training
+    name: cross training
   resource_61:
-    name: Yoga
+    name: yoga
   resource_62:
-    name: Curling
+    name: curling
   resource_63:
-    name: Cycling
+    name: cycling
   resource_64:
-    name: Dance
+    name: dance
   resource_65:
-    name: Diving
+    name: diving
   resource_66:
-    name: Downhill skiing
+    name: downhill skiing
   resource_67:
-    name: Duathlon
+    name: duathlon
   resource_68:
-    name: Elliptical
+    name: elliptical
   resource_69:
-    name: Fencing
+    name: fencing
   resource_70:
-    name: Field Hockey
+    name: field Hockey
   resource_71:
-    name: Functional training
+    name: functional training
   resource_72:
-    name: Golf
+    name: golf
   resource_73:
-    name: Gymnastics
+    name: gymnastics
   resource_74:
-    name: Hand cycling
+    name: hand cycling
   resource_75:
-    name: Handball
+    name: handball
   resource_76:
-    name: High-Intensity Interval Training (HIIT)
+    name: high-Intensity Interval Training (HIIT)
   resource_77:
-    name: Hiking
+    name: hiking
   resource_78:
-    name: Horseback riding
+    name: horseback riding
   resource_79:
-    name: Hunting
+    name: hunting
   resource_80:
-    name: Ice hockey
+    name: ice hockey
   resource_81:
-    name: Jumping rope
+    name: jumping rope
   resource_82:
-    name: Kayaking
+    name: kayaking
   resource_83:
-    name: Kickboxing
+    name: kickboxing
   resource_84:
-    name: Lacrosse
+    name: lacrosse
   resource_85:
-    name: Martial arts
+    name: martial arts
   resource_86:
-    name: Mixed cardio
+    name: mixed cardio
   resource_87:
-    name: Motocross
+    name: motocross
   resource_88:
-    name: Mountain biking
+    name: mountain biking
   resource_89:
-    name: Obstacle course racing
+    name: obstacle course racing
   resource_90:
-    name: Paddling
+    name: paddling
   resource_91:
-    name: Paddleboarding
+    name: paddleboarding
   resource_92:
-    name: Pilates
+    name: pilates
   resource_93:
-    name: Powerlifting
+    name: powerlifting
   resource_94:
-    name: Racquetball
+    name: racquetball
   resource_95:
-    name: Rock climbing
+    name: rock climbing
   resource_96:
-    name: Rolling
+    name: rolling
   resource_97:
-    name: Rowing
+    name: rowing
   resource_98:
-    name: Rugby
+    name: rugby
   resource_99:
-    name: Running
+    name: running
   resource_100:
-    name: Sailing
+    name: sailing
   resource_101:
-    name: Skateboarding
+    name: skateboarding
   resource_102:
-    name: Snowboarding
+    name: snowboarding
   resource_103:
-    name: Soccer
+    name: soccer
   resource_104:
-    name: Softball
+    name: softball
   resource_105:
-    name: Spinning
+    name: spinning
   resource_106:
-    name: Squash
+    name: squash
   resource_107:
-    name: Stairs
+    name: stairs
   resource_108:
-    name: Stairmaster
+    name: stairmaster
   resource_109:
-    name: Step trainer
+    name: step trainer
   resource_110:
-    name: Strength training
+    name: strength training
   resource_111:
-    name: Surfing
+    name: surfing
   resource_112:
-    name: Swimming
+    name: swimming
   resource_113:
-    name: Table tennis
+    name: table tennis
   resource_114:
-    name: Tai Chi
+    name: tai Chi
   resource_115:
-    name: Tennis
+    name: tennis
   resource_116:
-    name: Track & field
+    name: track & field
   resource_117:
-    name: Triathlon
+    name: triathlon
   resource_118:
-    name: Ultimate (frisbee)
+    name: ultimate (frisbee)
   resource_119:
-    name: Volleyball
+    name: volleyball
   resource_120:
-    name: Walking
+    name: walking
   resource_121:
-    name: Water polo
+    name: water polo
   resource_122:
-    name: Water fitness
+    name: water fitness
   resource_123:
-    name: Water sports
+    name: water sports
   resource_124:
-    name: Weightlifting
+    name: weightlifting
   resource_125:
-    name: Wheelchair
+    name: wheelchair
   resource_126:
-    name: Wrestling
-  resource_127:
-    name: Yoga
+    name: wrestling
 
 notification:
   symptom_follow_up:

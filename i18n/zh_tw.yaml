@@ -307,7 +307,6 @@ resources:
     name: 蛋奶素飲食
   resource_15:
     name: 無麩質飲食
-
   resource_16:
     name: 得舒飲食
   resource_17:
@@ -338,7 +337,6 @@ resources:
     name: 低脂肪飲食
   resource_30:
     name: 低鹽飲食
-
   resource_31:
     name: 無乳製/無乳糖
   resource_32:
@@ -369,7 +367,6 @@ resources:
     name: 益生菌
   resource_45:
     name: 間歇性斷食
-
   resource_46:
     name: 斷食
   resource_47:
@@ -400,7 +397,6 @@ resources:
     name: 越野滑雪
   resource_60:
     name: 交叉訓練
-
   resource_61:
     name: 瑜珈
   resource_62:
@@ -431,8 +427,6 @@ resources:
     name: 手輪
   resource_75:
     name: 手球
-
-
   resource_76:
     name: 高強度間歇式訓練
   resource_77:
@@ -463,7 +457,6 @@ resources:
     name: 障礙賽跑
   resource_90:
     name: 划船
-
   resource_91:
     name: 立式划槳
   resource_92:
@@ -494,7 +487,6 @@ resources:
     name: 壘球
   resource_105:
     name: 飛輪
-
   resource_106:
     name: 壁球
   resource_107:
