@@ -325,6 +325,7 @@ func (s *Server) getPOIResources(c *gin.Context) {
 	var params struct {
 		Language      string `form:"lang"`
 		ImportantOnly bool   `form:"important"`
+		IncludeAdded  bool   `form:"include_added"`
 	}
 
 	if err := c.Bind(&params); err != nil {
@@ -332,7 +333,7 @@ func (s *Server) getPOIResources(c *gin.Context) {
 		return
 	}
 
-	resources, err := s.mongoStore.GetPOIResources(poiID, params.ImportantOnly, params.Language)
+	resources, err := s.mongoStore.GetPOIResources(poiID, params.ImportantOnly, params.IncludeAdded, params.Language)
 	if err != nil {
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 		return

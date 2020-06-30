@@ -150,7 +150,7 @@ type POI interface {
 	NearestPOI(distance int, cords schema.Location) ([]primitive.ObjectID, error)
 
 	AddPOIResources(poiID primitive.ObjectID, resources []schema.Resource, lang string) ([]schema.Resource, error)
-	GetPOIResources(poiID primitive.ObjectID, importantOnly bool, lang string) ([]schema.Resource, error)
+	GetPOIResources(poiID primitive.ObjectID, importantOnly, includeAdded bool, lang string) ([]schema.Resource, error)
 	GetPOIResourceMetric(poiID primitive.ObjectID) (schema.POIRatingsMetric, error)
 	UpdatePOIRatingMetric(accountNumber string, poiID primitive.ObjectID, ratings []schema.RatingResource) error
 }
@@ -768,9 +768,12 @@ func (m *mongoDB) AddPOIResources(poiID primitive.ObjectID, resources []schema.R
 	return resources, nil
 }
 
-// GetPOIResources get resources from a POI. The list now comes from the translation file. If there is any changes
-// over the list, we need to update `DefaultResourceCount` and `importantResourceID` accordingly.
-func (m *mongoDB) GetPOIResources(poiID primitive.ObjectID, importantOnly bool, lang string) ([]schema.Resource, error) {
+// GetPOIResources get resources suggestion for a POI. The list now comes from the translation file.
+// If there is any changes over the list, we need to update `DefaultResourceCount` and `importantResourceID` accordingly.
+// The importantOnly variable determines whether only shows resources where it is importants.
+// Normally, added resources will be excluded from the return. If `includeAdded` is set to true,
+// the return will contain those added resources.
+func (m *mongoDB) GetPOIResources(poiID primitive.ObjectID, importantOnly, includeAdded bool, lang string) ([]schema.Resource, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	c := m.client.Database(m.database)
@@ -798,10 +801,16 @@ func (m *mongoDB) GetPOIResources(poiID primitive.ObjectID, importantOnly bool, 
 
 	suggestedResource := make([]schema.Resource, 0)
 	for _, r := range resources {
+		_, added := ratedResource[r.ID]
+		if includeAdded && added {
+			suggestedResource = append(suggestedResource, r)
+		}
+
 		if importantOnly && !r.Important {
 			continue
 		}
-		if _, ok := ratedResource[r.ID]; ok {
+
+		if added {
 			continue
 		}
 

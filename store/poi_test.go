@@ -739,22 +739,22 @@ func (s *POITestSuite) TestAddPOIResourcesDuplicated() {
 
 func (s *POITestSuite) TestGetPOIResourcesWithNoResourceAdded() {
 	store := NewMongoStore(s.mongoClient, s.testDBName)
-	resources, err := store.GetPOIResources(noResourcesPOIID2, false, "en")
+	resources, err := store.GetPOIResources(noResourcesPOIID2, false, false, "en")
 	s.NoError(err)
 	s.Len(resources, 126)
 
-	resources, err = store.GetPOIResources(noResourcesPOIID2, true, "en")
+	resources, err = store.GetPOIResources(noResourcesPOIID2, true, false, "en")
 	s.NoError(err)
 	s.Len(resources, 30)
 }
 
 func (s *POITestSuite) TestGetPOIResourcesWithUnsupportLanguage() { // fallback to en
 	store := NewMongoStore(s.mongoClient, s.testDBName)
-	resources, err := store.GetPOIResources(noResourcesPOIID2, false, "fr")
+	resources, err := store.GetPOIResources(noResourcesPOIID2, false, false, "fr")
 	s.NoError(err)
 	s.Len(resources, 126)
 
-	resources, err = store.GetPOIResources(noResourcesPOIID2, true, "fr")
+	resources, err = store.GetPOIResources(noResourcesPOIID2, true, false, "fr")
 	s.NoError(err)
 	s.Len(resources, 30)
 }
@@ -764,26 +764,36 @@ func (s *POITestSuite) TestGetPOIResourcesWithNoDefaultLanguage() {
 	delete(defaultResourceList, "en")
 
 	store := NewMongoStore(s.mongoClient, s.testDBName)
-	resources, err := store.GetPOIResources(noResourcesPOIID2, false, "en")
+	resources, err := store.GetPOIResources(noResourcesPOIID2, false, false, "en")
 	s.EqualError(err, "poi resources not found")
 	s.Nil(resources)
 
-	resources, err = store.GetPOIResources(noResourcesPOIID2, true, "en")
+	resources, err = store.GetPOIResources(noResourcesPOIID2, true, false, "en")
 	s.EqualError(err, "poi resources not found")
 	s.Nil(resources)
 }
 
 func (s *POITestSuite) TestGetPOIResourcesWithTwoResourceAdded() {
 	store := NewMongoStore(s.mongoClient, s.testDBName)
-	resources, err := store.GetPOIResources(officialResourcesPOIID, false, "en")
+	resources, err := store.GetPOIResources(officialResourcesPOIID, false, false, "en")
 	s.NoError(err)
 	s.Len(resources, 124) // two resources added, 126 - 2
 
-	resources, err = store.GetPOIResources(officialResourcesPOIID, true, "en")
+	resources, err = store.GetPOIResources(officialResourcesPOIID, true, false, "en")
 	s.NoError(err)
-	s.Len(resources, 29) // only one important, 30 - 1
+	s.Len(resources, 29) // two resources added but only one important, 30 - 1
 }
 
+func (s *POITestSuite) TestGetPOIResourcesWithTwoResourceAddedAndIncludeAdded() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+	resources, err := store.GetPOIResources(officialResourcesPOIID, false, true, "en")
+	s.NoError(err)
+	s.Len(resources, 126) // two resources added, 126 - 2
+
+	resources, err = store.GetPOIResources(officialResourcesPOIID, true, true, "en")
+	s.NoError(err)
+	s.Len(resources, 31) // two resources added but only one not belongs to important, 30 + 1
+}
 func (s *POITestSuite) TestGetPOIMetric() {
 	store := NewMongoStore(s.mongoClient, s.testDBName)
 	metric, err := store.GetPOIMetrics(metricPOIID)
