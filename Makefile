@@ -74,7 +74,6 @@ build: build-api-image build-score-worker-image build-nudge-worker-image build-c
 
 mockgen:
 	mockgen -package=mocks -destination=mocks/mongo.go "github.com/bitmark-inc/autonomy-api/store" MongoStore
-	mockgen -package=mocks -destination=mocks/autonomy.go "github.com/bitmark-inc/autonomy-api/store" AutonomyCore
 	mockgen -package=mocks -destination=geo/mocks/resolver.go "github.com/bitmark-inc/autonomy-api/geo" LocationResolver
 	mockgen -package=mocks -destination=external/mocks/geo.go "github.com/bitmark-inc/autonomy-api/external/geoinfo" GeoInfo
 	mockgen -package=mocks -destination=mocks/notification.go "github.com/bitmark-inc/autonomy-api/background" NotificationCenter

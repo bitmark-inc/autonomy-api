@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -29,36 +27,6 @@ func init() {
 }
 
 func main() {
-	db, err := gorm.Open("postgres", viper.GetString("orm.conn"))
-	if err != nil {
-		panic(err)
-	}
-
-	if err := db.Exec(`CREATE SCHEMA IF NOT EXISTS autonomy`).Error; err != nil {
-		panic(err)
-	}
-
-	if err := db.Exec("SET search_path TO autonomy").Error; err != nil {
-		panic(err)
-	}
-
-	if err := db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`).Error; err != nil {
-		panic(err)
-	}
-
-	if err := db.AutoMigrate(
-		&schema.Account{},
-		&schema.AccountProfile{},
-		&schema.HelpRequest{},
-	).Error; err != nil {
-		panic(err)
-	}
-
-	if err := db.Model(schema.HelpRequest{}).Where(fmt.Sprintf("state = '%s'", "PENDING")).
-		AddUniqueIndex("help_request_unique_if_not_done", "requester").Error; err != nil {
-		panic(err)
-	}
-
 	schema.NewMongoDBIndexer(viper.GetString("mongo.conn"), viper.GetString("mongo.database")).IndexAll()
 
 	err = migrateMongo()

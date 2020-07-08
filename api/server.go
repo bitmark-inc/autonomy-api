@@ -13,7 +13,6 @@ import (
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
@@ -41,7 +40,6 @@ type Server struct {
 	traceMode bool
 
 	// Stores
-	store      store.AutonomyCore
 	mongoStore store.MongoStore
 
 	// JWT private key
@@ -64,7 +62,6 @@ type Server struct {
 
 // NewServer new instance of server
 func NewServer(
-	ormDB *gorm.DB,
 	mongoClient *mongo.Client,
 	jwtKey *rsa.PrivateKey,
 	bitmarkAccount *account.AccountV2,
@@ -86,7 +83,6 @@ func NewServer(
 
 	return &Server{
 		traceMode:       viper.GetBool("server.trace_mode"),
-		store:           store.NewAutonomyStore(ormDB, mongoStore),
 		mongoStore:      mongoStore,
 		jwtPrivateKey:   jwtKey,
 		httpClient:      httpClient,
@@ -140,7 +136,6 @@ func (s *Server) setupRouter() *gin.Engine {
 
 	// api route other than `/auth` will apply the following middleware
 	apiRoute.Use(s.authMiddleware())
-	apiRoute.Use(s.updateGeoPositionMiddleware)
 
 	accountRoute := apiRoute.Group("/accounts")
 	{
@@ -161,22 +156,9 @@ func (s *Server) setupRouter() *gin.Engine {
 		accountRoute.DELETE("/me/pois/:poiID", s.deletePOI)
 		accountRoute.PUT("/me/pois", s.updatePOIOrder)
 
-		accountRoute.GET("/me/profile_formula", s.getProfileFormula)
-		accountRoute.PUT("/me/profile_formula", s.updateProfileFormula)
-		accountRoute.DELETE("/me/profile_formula", s.resetProfileFormula)
-
 		// accountRoute.POST("/me/export", s.accountPrepareExport)
 		// accountRoute.GET("/me/export", s.accountExportStatus)
 		// accountRoute.GET("/me/export/download", s.accountDownloadExport)
-	}
-
-	helpRoute := apiRoute.Group("/helps")
-	helpRoute.Use(s.recognizeAccountMiddleware())
-	{
-		helpRoute.POST("", s.askForHelp)
-		helpRoute.GET("", s.queryHelps)
-		helpRoute.GET("/:helpID", s.queryHelps)
-		helpRoute.PATCH("/:helpID", s.answerHelp)
 	}
 
 	secretRoute := r.Group("/secret")
@@ -300,13 +282,7 @@ func shouldInterupt(err error, c *gin.Context) bool {
 }
 
 func (s *Server) healthz(c *gin.Context) {
-	// Ping db
-	err := s.store.Ping()
-	if shouldInterupt(err, c) {
-		return
-	}
-
-	err = s.mongoStore.Ping()
+	err := s.mongoStore.Ping()
 	if shouldInterupt(err, c) {
 		return
 	}

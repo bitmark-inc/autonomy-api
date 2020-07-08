@@ -26,9 +26,6 @@ var (
 		1106: "unknown POI",
 		1107: "no POI in the profile",
 
-		1200: store.ErrRequestNotExist.Error(),
-		1201: store.ErrMultipleRequestMade.Error(),
-
 		1300: store.ErrPOIListNotFound.Error(),
 		1301: store.ErrPOIListMismatch.Error(),
 		1302: store.ErrEmptyPOIResourceName.Error(),

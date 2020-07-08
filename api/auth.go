@@ -15,8 +15,8 @@ import (
 	jwtrequest "github.com/dgrijalva/jwt-go/request"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/bitmark-inc/bitmark-sdk-go/account"
 )
@@ -148,21 +148,21 @@ func (s *Server) apikeyAuthentication(key string) gin.HandlerFunc {
 func (s *Server) recognizeAccountMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		requester := c.GetString("requester")
-		account, err := s.store.GetAccount(requester)
+		profile, err := s.mongoStore.GetProfile(requester)
 
-		if gorm.IsRecordNotFoundError(err) {
+		if err == mongo.ErrNoDocuments {
 			abortWithEncoding(c, http.StatusUnauthorized, errorAccountNotFound)
 			return
 		} else if shouldInterupt(err, c) {
 			return
 		}
 
-		if account == nil {
+		if profile == nil {
 			abortWithEncoding(c, http.StatusUnauthorized, errorAccountNotFound)
 			return
 		}
 
-		c.Set("account", account)
+		c.Set("account", profile)
 		c.Next()
 	}
 }

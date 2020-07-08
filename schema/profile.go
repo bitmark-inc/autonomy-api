@@ -44,18 +44,20 @@ type NudgeTime map[NudgeType]time.Time
 
 // Profile - user profile data
 type Profile struct {
-	ID                  string            `bson:"id"`
-	AccountNumber       string            `bson:"account_number"`
-	Location            *GeoJSON          `bson:"location,omitempty"`
-	Timezone            string            `bson:"timezone"`
-	HealthScore         float64           `bson:"health_score"`
-	IndividualMetric    IndividualMetric  `bson:"individual_metric"`
-	Metric              Metric            `bson:"metric"`
-	ScoreCoefficient    *ScoreCoefficient `bson:"score_coefficient"`
-	LastNudge           NudgeTime         `bson:"last_nudge,omitempty"`
-	PointsOfInterest    []ProfilePOI      `bson:"points_of_interest,omitempty"`
-	CustomizedBehaviors []Behavior        `bson:"customized_behavior"`
-	CustomizedSymptoms  []Symptom         `bson:"customized_symptom"`
+	ID                  string                 `bson:"id"`
+	AccountNumber       string                 `bson:"account_number"`
+	EncryptionPublicKey string                 `bson:"enc_pub_key"`
+	Metadata            map[string]interface{} `bson:"metadata"`
+	Location            *GeoJSON               `bson:"location,omitempty"`
+	Timezone            string                 `bson:"timezone"`
+	HealthScore         float64                `bson:"health_score"`
+	IndividualMetric    IndividualMetric       `bson:"individual_metric"`
+	Metric              Metric                 `bson:"metric"`
+	ScoreCoefficient    *ScoreCoefficient      `bson:"score_coefficient"`
+	LastNudge           NudgeTime              `bson:"last_nudge,omitempty"`
+	PointsOfInterest    []ProfilePOI           `bson:"points_of_interest,omitempty"`
+	CustomizedBehaviors []Behavior             `bson:"customized_behavior"`
+	CustomizedSymptoms  []Symptom              `bson:"customized_symptom"`
 }
 
 // GeoJSON - mongo location format

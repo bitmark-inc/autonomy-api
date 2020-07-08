@@ -19,8 +19,6 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/getsentry/sentry-go"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -37,7 +35,6 @@ import (
 
 var (
 	server *api.Server
-	ormDB  *gorm.DB
 )
 
 func initLog() {
@@ -105,13 +102,6 @@ func main() {
 			}
 		}
 
-		if ormDB != nil {
-			log.Info("Shutting down db store")
-			if err := ormDB.Close(); err != nil {
-				log.Error(err)
-			}
-		}
-
 		os.Exit(1)
 	}()
 
@@ -169,11 +159,6 @@ func main() {
 	}
 	log.WithField("prefix", "init").Info("Loaded global jwt key")
 
-	ormDB, err = gorm.Open("postgres", viper.GetString("orm.conn"))
-	if err != nil {
-		log.Panic(err)
-	}
-
 	// initialise mongodb connections
 	opts := options.Client().ApplyURI(viper.GetString("mongo.conn"))
 	opts.SetMaxPoolSize(viper.GetUint64("mongo.pool"))
@@ -205,7 +190,6 @@ func main() {
 
 	// Init http server
 	server = api.NewServer(
-		ormDB,
 		mongoClient,
 		jwtPrivateKey,
 		globalAccount,
