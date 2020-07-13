@@ -137,6 +137,8 @@ type POI interface {
 	AddPOI(alias, address, placeType string, lon, lat float64) (*schema.POI, error)
 	ListPOI(accountNumber string) ([]schema.POIDetail, error)
 	ListPOIByResource(resourceID string, coordinates schema.Location) ([]schema.POI, error)
+	ListPOIByPlaceType(place_type string) ([]schema.POI, error)
+	SearchPOIByText(text string) ([]schema.POI, error)
 
 	GetPOI(poiID primitive.ObjectID) (*schema.POI, error)
 	GetPOIByCoordinates(schema.Location) (*schema.POI, error)
@@ -351,6 +353,58 @@ func (m *mongoDB) ListPOIByResource(resourceID string, coordinates schema.Locati
 			"metric":           0,
 		}),
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	var pois []schema.POI
+	if err := cursor.All(ctx, &pois); err != nil {
+		return nil, err
+	}
+
+	return pois, nil
+}
+
+// ListPOIByPlaceType list POIs that contains a given place type
+func (m *mongoDB) ListPOIByPlaceType(place_type string) ([]schema.POI, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+
+	c := m.client.Database(m.database).Collection(schema.POICollection)
+
+	log.WithField("place_type", place_type).Info("search POI by place type")
+	cursor, err := c.Find(ctx, bson.M{
+		"place_types": bson.M{
+			"$in": []string{place_type},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var pois []schema.POI
+	if err := cursor.All(ctx, &pois); err != nil {
+		return nil, err
+	}
+
+	return pois, nil
+}
+
+// SearchPOIByText search POIs that contains given texts in its alias and address field
+func (m *mongoDB) SearchPOIByText(text string) ([]schema.POI, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+
+	c := m.client.Database(m.database).Collection(schema.POICollection)
+
+	// regular expression for text in case insensitive way
+	regex := primitive.Regex{Pattern: text, Options: "i"}
+
+	log.WithField("regex", regex.String()).Info("search POI by text")
+	cursor, err := c.Find(ctx, bson.M{"$or": bson.A{
+		bson.M{"address": regex},
+		bson.M{"alias": regex},
+	}})
 	if err != nil {
 		return nil, err
 	}

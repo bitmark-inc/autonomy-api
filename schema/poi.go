@@ -22,6 +22,7 @@ type POI struct {
 	State           string             `bson:"state" json:"-"`
 	County          string             `bson:"county" json:"-"`
 	PlaceType       string             `bson:"place_type" json:"-"`
+	PlaceTypes      []string           `bson:"place_types" json:"-"`
 	Distance        *float64           `bson:"distance,omitempty"`
 	ResourceScore   *float64           `bson:"resource_score,omitempty"`
 	ResourceRatings POIRatingsMetric   `bson:"resource_ratings" json:"-"`

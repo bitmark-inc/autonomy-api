@@ -116,7 +116,7 @@ func (s *Server) listOwnPOI(c *gin.Context) {
 }
 
 func (s *Server) listPOI(c *gin.Context) {
-	account, ok := c.MustGet("account").(*schema.Account)
+	profile, ok := c.MustGet("account").(*schema.Profile)
 	if !ok {
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer)
 		return
@@ -124,6 +124,8 @@ func (s *Server) listPOI(c *gin.Context) {
 
 	var params struct {
 		ResourceID string `form:"resource_id"`
+		PlaceType  string `form:"place_type"`
+		Text       string `form:"text"`
 	}
 
 	if err := c.Bind(&params); err != nil {
@@ -131,45 +133,60 @@ func (s *Server) listPOI(c *gin.Context) {
 		return
 	}
 
+	var pois []schema.POI
+	var err error
 	if params.ResourceID != "" {
-		location := account.Profile.State.LastLocation
+		location := &schema.Location{
+			Longitude: profile.Location.Coordinates[0],
+			Latitude:  profile.Location.Coordinates[1],
+		}
 		if nil == location {
 			abortWithEncoding(c, http.StatusBadRequest, errorUnknownAccountLocation)
 			return
 		}
 
-		pois, err := s.mongoStore.ListPOIByResource(params.ResourceID, *location)
+		pois, err = s.mongoStore.ListPOIByResource(params.ResourceID, *location)
 		if err != nil {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
 		}
-
-		response := make([]schema.POIDetail, len(pois))
-
-		for i, p := range pois {
-			response[i] = schema.POIDetail{
-				ProfilePOI: schema.ProfilePOI{
-					ID:        p.ID,
-					Address:   p.Address,
-					Alias:     p.Alias,
-					Score:     p.Score,
-					PlaceType: p.PlaceType,
-				},
-				Location: &schema.Location{
-					Longitude: p.Location.Coordinates[0],
-					Latitude:  p.Location.Coordinates[1],
-				},
-				Distance:      p.Distance,
-				ResourceScore: p.ResourceScore,
-			}
+	} else if params.PlaceType != "" {
+		pois, err = s.mongoStore.ListPOIByPlaceType(params.PlaceType)
+		if err != nil {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+			return
 		}
-
-		c.JSON(http.StatusOK, response)
-		return
+	} else if params.Text != "" {
+		pois, err = s.mongoStore.SearchPOIByText(params.Text)
+		if err != nil {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+			return
+		}
 	} else {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters)
 		return
 	}
+
+	response := make([]schema.POIDetail, len(pois))
+	for i, p := range pois {
+		response[i] = schema.POIDetail{
+			ProfilePOI: schema.ProfilePOI{
+				ID:        p.ID,
+				Address:   p.Address,
+				Alias:     p.Alias,
+				Score:     p.Score,
+				PlaceType: p.PlaceType,
+			},
+			Location: &schema.Location{
+				Longitude: p.Location.Coordinates[0],
+				Latitude:  p.Location.Coordinates[1],
+			},
+			Distance:      p.Distance,
+			ResourceScore: p.ResourceScore,
+		}
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func (s *Server) updatePOIAlias(c *gin.Context) {

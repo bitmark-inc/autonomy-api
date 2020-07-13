@@ -38,6 +38,10 @@ var twoResourcesPOIID = primitive.NewObjectID()
 var officialResourcesPOIID = primitive.NewObjectID()
 var listResourcePOI1ID = primitive.NewObjectID()
 var listResourcePOI2ID = primitive.NewObjectID()
+var listPlaceTypePOIID = primitive.NewObjectID()
+var listPlaceTypePOI2ID = primitive.NewObjectID()
+var searchTextInAliasPOIID = primitive.NewObjectID()
+var searchTextInAddressPOIID = primitive.NewObjectID()
 
 var notFoundPOIID = primitive.NewObjectID()
 
@@ -204,6 +208,43 @@ var (
 			},
 		},
 	}
+
+	listPlaceTypePOI = schema.POI{
+		ID: listPlaceTypePOIID,
+		Location: &schema.GeoJSON{
+			Type:        "Point",
+			Coordinates: []float64{118.12345, 25.12345},
+		},
+		PlaceTypes: []string{"test_place"},
+	}
+
+	listPlaceTypePOI2 = schema.POI{
+		ID: listPlaceTypePOI2ID,
+		Location: &schema.GeoJSON{
+			Type:        "Point",
+			Coordinates: []float64{118.12345, 25.12345},
+		},
+		PlaceTypes: []string{"test_place", "happy_run"},
+	}
+
+	searchTextInAddressPOI = schema.POI{
+		ID:      searchTextInAddressPOIID,
+		Address: "Bitmark",
+		Alias:   "test only alias123",
+		Location: &schema.GeoJSON{
+			Type:        "Point",
+			Coordinates: []float64{117.12345, 25.12345},
+		},
+	}
+	searchTextInAliasPOI = schema.POI{
+		ID:      searchTextInAliasPOIID,
+		Address: "test only address123",
+		Alias:   "Bitmark",
+		Location: &schema.GeoJSON{
+			Type:        "Point",
+			Coordinates: []float64{117.12345, 25.12345},
+		},
+	}
 )
 
 var originAlias = "origin POI"
@@ -364,6 +405,10 @@ func (s *POITestSuite) LoadMongoDBFixtures() error {
 		officialResourcesPOI,
 		listResourcePOI1,
 		listResourcePOI2,
+		listPlaceTypePOI,
+		listPlaceTypePOI2,
+		searchTextInAddressPOI,
+		searchTextInAliasPOI,
 	}); err != nil {
 		return err
 	}
@@ -891,6 +936,40 @@ func (s *POITestSuite) TestListPOIByResourceOutOfRange() {
 	pois, err := store.ListPOIByResource("resource_11", location)
 	s.NoError(err)
 	s.Len(pois, 0)
+}
+
+func (s *POITestSuite) TestListPOIByPlaceType() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+
+	pois, err := store.ListPOIByPlaceType("test_place")
+	s.NoError(err)
+	s.Len(pois, 2)
+
+	pois, err = store.ListPOIByPlaceType("happy_run")
+	s.NoError(err)
+	s.Len(pois, 1)
+}
+
+func (s *POITestSuite) TestSearchPOIByText() {
+	store := NewMongoStore(s.mongoClient, s.testDBName)
+
+	pois, err := store.SearchPOIByText("bitmark")
+	s.NoError(err)
+	s.Len(pois, 2)
+
+	pois, err = store.SearchPOIByText("Bitmark")
+	s.NoError(err)
+	s.Len(pois, 2)
+
+	pois, err = store.SearchPOIByText("address123")
+	s.NoError(err)
+	s.Len(pois, 1)
+	s.Contains(pois[0].Address, "address123")
+
+	pois, err = store.SearchPOIByText("alias123")
+	s.NoError(err)
+	s.Len(pois, 1)
+	s.Contains(pois[0].Alias, "alias123")
 }
 
 func (s *POITestSuite) TestGetPOIByCoordinates() {
