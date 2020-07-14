@@ -114,3 +114,25 @@ func (d *DataStore) SetPOICommunityRating(token string, id string, ratings map[s
 
 	return nil
 }
+
+func (d *DataStore) GetCommunitySymptomReportItems(token, start, end string) (*schema.ReportItems, error) {
+	r, err := d.cds.GetSymptomReportItems(token, start, end)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Body.Close()
+
+	if r.StatusCode != 200 {
+		b, _ := httputil.DumpResponse(r, true)
+		log.WithField("resp", string(b)).Debug("error from ratings api")
+		return nil, fmt.Errorf("fail to get symptom report items")
+	}
+
+	var items schema.ReportItems
+
+	if err := json.NewDecoder(r.Body).Decode(&items); err != nil {
+		return nil, err
+	}
+
+	return &items, nil
+}

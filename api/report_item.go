@@ -1,14 +1,13 @@
 package api
 
 import (
-	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/bitmark-inc/autonomy-api/external/datastore"
 	"github.com/bitmark-inc/autonomy-api/schema"
 	"github.com/bitmark-inc/autonomy-api/score"
 )
@@ -69,17 +68,21 @@ func (s *Server) getReportItems(c *gin.Context) {
 		return
 	}
 
+	macaroonToken := c.GetHeader("X-FORWARD-MACAROON-CDS")
+	if macaroonToken == "" {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, fmt.Errorf("invalid maracoon token"))
+		return
+	}
+
 	switch params.Type {
 	case reportItemTypeSymptom:
-		// TODO: set cds in server and extract macaroon token from header
-		cds := datastore.NewCommunityDataStore("http://localhost:8080")
-		resp, err := cds.GetSymptomReports(hex.EncodeToString([]byte("token")), params.Start, params.End)
-		if err != nil || resp.StatusCode != http.StatusOK {
+		items, err := s.dataStore.GetCommunitySymptomReportItems(macaroonToken, params.Start, params.End)
+		if err != nil {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
 		}
 
-		c.DataFromReader(http.StatusOK, resp.ContentLength, resp.Header.Get("Content-Type"), resp.Body, nil)
+		c.JSON(http.StatusOK, items)
 	default:
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters)
 		return

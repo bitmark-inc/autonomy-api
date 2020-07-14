@@ -109,7 +109,7 @@ func (cds *CommunityDataStore) GetPOIRatings(token string, poiIDs []string) (*ht
 	return cds.client.MakeRequest(req, token)
 }
 
-func (cds *CommunityDataStore) GetSymptomReports(token, start, end string) (*http.Response, error) {
+func (cds *CommunityDataStore) GetSymptomReportItems(token, start, end string) (*http.Response, error) {
 	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/report-items?start=%s&end=%s&type=symptom",
 		cds.apiEndpoint, url.QueryEscape(start), url.QueryEscape(end)), nil)
 	return cds.client.MakeRequest(req, token)
