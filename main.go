@@ -24,6 +24,7 @@ import (
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
 	"github.com/bitmark-inc/autonomy-api/api"
+	"github.com/bitmark-inc/autonomy-api/datastore"
 	"github.com/bitmark-inc/autonomy-api/external/aqi"
 	"github.com/bitmark-inc/autonomy-api/geo"
 	"github.com/bitmark-inc/autonomy-api/store"
@@ -188,9 +189,12 @@ func main() {
 
 	aqiClient := aqi.New(viper.GetString("aqi.key"), "")
 
+	dataStore := datastore.NewDataStore(viper.GetString("pds.endpoint"), viper.GetString("cds.endpoint"))
+
 	// Init http server
 	server = api.NewServer(
 		mongoClient,
+		dataStore,
 		jwtPrivateKey,
 		globalAccount,
 		aqiClient)

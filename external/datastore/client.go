@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -85,7 +86,7 @@ func NewCommunityDataStore(endpoint string) *CommunityDataStore {
 	}
 }
 
-func (cds *CommunityDataStore) AddPOIRating(token, poiID string, ratings map[string]float64) (*http.Response, error) {
+func (cds *CommunityDataStore) SetPOIRating(token, poiID string, ratings map[string]float64) (*http.Response, error) {
 	// prepare request body
 	var body bytes.Buffer
 	if err := json.NewEncoder(&body).Encode(map[string]interface{}{
@@ -94,11 +95,16 @@ func (cds *CommunityDataStore) AddPOIRating(token, poiID string, ratings map[str
 		return nil, err
 	}
 
-	req, _ := http.NewRequest("PUT", fmt.Sprintf("%s/poi_rating/%s", cds.apiEndpoint, poiID), nil)
+	req, _ := http.NewRequest("PUT", fmt.Sprintf("%s/poi_rating/%s", cds.apiEndpoint, poiID), &body)
 	return cds.client.MakeRequest(req, token)
 }
 
 func (cds *CommunityDataStore) GetPOIRating(token, poiID string) (*http.Response, error) {
 	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/poi_rating/%s", cds.apiEndpoint, poiID), nil)
+	return cds.client.MakeRequest(req, token)
+}
+
+func (cds *CommunityDataStore) GetPOIRatings(token string, poiIDs []string) (*http.Response, error) {
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/poi_rating?poi_ids=%s", cds.apiEndpoint, strings.Join(poiIDs, ",")), nil)
 	return cds.client.MakeRequest(req, token)
 }

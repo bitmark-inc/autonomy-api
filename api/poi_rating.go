@@ -12,6 +12,67 @@ import (
 	"github.com/bitmark-inc/autonomy-api/store"
 )
 
+func (s *Server) setPOIRating(c *gin.Context) {
+	poiID := c.Param("poiID")
+	macaroonTokenPDS := c.GetHeader("X-FORWARD-MACAROON-PDS")
+	macaroonTokenCDS := c.GetHeader("X-FORWARD-MACAROON-CDS")
+	if macaroonTokenPDS == "" || macaroonTokenCDS == "" {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, fmt.Errorf("invalid maracoon token"))
+		return
+	}
+
+	var params struct {
+		Ratings map[string]float64 `json:"ratings"`
+	}
+
+	if err := c.BindJSON(&params); err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
+		return
+	}
+
+	err := s.dataStore.SetPOIRating(macaroonTokenPDS, poiID, params.Ratings)
+	if err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+
+	err = s.dataStore.SetPOICommunityRating(macaroonTokenCDS, poiID, params.Ratings)
+	if err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"result": "ok"})
+}
+
+func (s *Server) getPOIRating(c *gin.Context) {
+	poiID := c.Param("poiID")
+	macaroonToken := c.GetHeader("X-FORWARD-MACAROON-PDS")
+	if macaroonToken == "" {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, fmt.Errorf("invalid maracoon token"))
+		return
+	}
+
+	rating, err := s.dataStore.GetPOIRating(macaroonToken, poiID)
+	if err != nil {
+		fmt.Println(err.Error())
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+
+	if rating.Ratings == nil {
+		rating.Ratings = map[string]float64{}
+	}
+
+	for k := range defaultWebAppResourceIDMap["en"] {
+		if _, ok := rating.Ratings[k]; !ok {
+			rating.Ratings[k] = 0.0
+		}
+	}
+
+	c.JSON(http.StatusOK, rating)
+}
+
 func (s *Server) updatePOIRating(c *gin.Context) {
 	account, ok := c.MustGet("account").(*schema.Account)
 	if !ok {

@@ -18,6 +18,7 @@ import (
 
 	"github.com/bitmark-inc/bitmark-sdk-go/account"
 
+	"github.com/bitmark-inc/autonomy-api/datastore"
 	"github.com/bitmark-inc/autonomy-api/external/aqi"
 	"github.com/bitmark-inc/autonomy-api/external/cadence"
 	"github.com/bitmark-inc/autonomy-api/external/onesignal"
@@ -41,6 +42,7 @@ type Server struct {
 
 	// Stores
 	mongoStore store.MongoStore
+	dataStore  *datastore.DataStore
 
 	// JWT private key
 	jwtPrivateKey *rsa.PrivateKey
@@ -63,6 +65,7 @@ type Server struct {
 // NewServer new instance of server
 func NewServer(
 	mongoClient *mongo.Client,
+	dataStore *datastore.DataStore,
 	jwtKey *rsa.PrivateKey,
 	bitmarkAccount *account.AccountV2,
 	aqiClient aqi.AQI,
@@ -84,6 +87,7 @@ func NewServer(
 	return &Server{
 		traceMode:       viper.GetBool("server.trace_mode"),
 		mongoStore:      mongoStore,
+		dataStore:       dataStore,
 		jwtPrivateKey:   jwtKey,
 		httpClient:      httpClient,
 		bitmarkAccount:  bitmarkAccount,
@@ -95,6 +99,8 @@ func NewServer(
 
 // Run to run the server
 func (s *Server) Run(addr string) error {
+	s.loadWebAppDefaultPOIResources("en")
+
 	s.server = &http.Server{
 		Addr:    addr,
 		Handler: s.setupRouter(),
@@ -186,6 +192,9 @@ func (s *Server) setupRouter() *gin.Engine {
 		poiRoute.GET("/:poiID/resources", s.getPOIResources)
 		poiRoute.PUT("/:poiID/resource-ratings", s.updatePOIRating)
 		poiRoute.GET("/:poiID/resource-ratings", s.getProfileRatings)
+
+		poiRoute.PUT("/:poiID/ratings", s.setPOIRating)
+		poiRoute.GET("/:poiID/ratings", s.getPOIRating)
 	}
 
 	// suggestion

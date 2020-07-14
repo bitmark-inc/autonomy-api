@@ -3,15 +3,70 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/bitmark-inc/autonomy-api/schema"
 	"github.com/bitmark-inc/autonomy-api/store"
 	"github.com/bitmark-inc/autonomy-api/utils"
 )
+
+var webapiResourceIDs = map[string]struct{}{
+	"face_coverings_required":               {},
+	"social_distancing":                     {},
+	"temperature_checks":                    {},
+	"hand_sanitizer":                        {},
+	"equipment_disinfected":                 {},
+	"surfaces_disinfected":                  {},
+	"hand_washing_facilities":               {},
+	"good_air_circulation":                  {},
+	"outdoor_options":                       {},
+	"special_hours_for_at_risk_populations": {},
+}
+
+var defaultWebAppResourceList = map[string][]schema.Resource{}
+var defaultWebAppResourceIDMap = map[string]map[string]string{}
+
+// loadWebAppDefaultPOIResources loads resources from the tranlation list and cache it for later usage.
+func (s *Server) loadWebAppDefaultPOIResources(lang string) error {
+	if lang == "" {
+		lang = "en"
+	}
+
+	lang = strings.ReplaceAll(strings.ToLower(lang), "-", "_")
+
+	if _, ok := defaultWebAppResourceList[lang]; ok {
+		return nil
+	}
+
+	localizer := utils.NewLocalizer(lang)
+	resourceIDMap := map[string]string{}
+	resources := make([]schema.Resource, 0, len(webapiResourceIDs))
+	for id := range webapiResourceIDs {
+		name, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: fmt.Sprintf("resource_for_webapp.%s.name", id)})
+		if err != nil {
+			log.WithError(err).Error("fail to load resource in proper language")
+			return err
+		}
+		resources = append(resources, schema.Resource{
+			ID:   id,
+			Name: name,
+		})
+
+		resourceIDMap[id] = name
+	}
+	defaultWebAppResourceList[lang] = resources
+	defaultWebAppResourceIDMap[lang] = resourceIDMap
+	return nil
+}
+
+func getWebAppResources() []schema.Resource {
+	return defaultWebAppResourceList["en"]
+}
 
 type poiRequestBody struct {
 	ID       string           `json:"poi_id"`
@@ -134,6 +189,8 @@ func (s *Server) listPOI(c *gin.Context) {
 	}
 
 	var pois []schema.POI
+	var poiIDs []string // poiIDs will determine whether to get data from data store
+	var poiRatings map[string]schema.POIRating
 	var err error
 	if params.ResourceID != "" {
 		location := &schema.Location{
@@ -156,11 +213,21 @@ func (s *Server) listPOI(c *gin.Context) {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
 		}
+
+		poiIDs = make([]string, len(pois))
+		for i, p := range pois {
+			poiIDs[i] = p.ID.Hex()
+		}
 	} else if params.Text != "" {
 		pois, err = s.mongoStore.SearchPOIByText(params.Text)
 		if err != nil {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
+		}
+
+		poiIDs = make([]string, len(pois))
+		for i, p := range pois {
+			poiIDs[i] = p.ID.Hex()
 		}
 	} else {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters)
@@ -168,21 +235,64 @@ func (s *Server) listPOI(c *gin.Context) {
 	}
 
 	response := make([]schema.POIDetail, len(pois))
-	for i, p := range pois {
-		response[i] = schema.POIDetail{
-			ProfilePOI: schema.ProfilePOI{
-				ID:        p.ID,
-				Address:   p.Address,
-				Alias:     p.Alias,
-				Score:     p.Score,
-				PlaceType: p.PlaceType,
-			},
-			Location: &schema.Location{
-				Longitude: p.Location.Coordinates[0],
-				Latitude:  p.Location.Coordinates[1],
-			},
-			Distance:      p.Distance,
-			ResourceScore: p.ResourceScore,
+	if len(poiIDs) > 0 {
+		var err error
+		macaroonToken := c.GetHeader("X-FORWARD-MACAROON-CDS")
+		if macaroonToken == "" {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, fmt.Errorf("invalid maracoon token"))
+			return
+		}
+
+		poiRatings, err = s.dataStore.GetPOICommunityRatings(macaroonToken, poiIDs)
+		if err != nil {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+			return
+		}
+
+		for i, p := range pois {
+			rating := poiRatings[p.ID.Hex()]
+			if rating.Ratings == nil {
+				rating.Ratings = map[string]float64{}
+			}
+			for k := range defaultWebAppResourceIDMap["en"] {
+				if _, ok := rating.Ratings[k]; !ok {
+					rating.Ratings[k] = 0.0
+				}
+			}
+
+			response[i] = schema.POIDetail{
+				ProfilePOI: schema.ProfilePOI{
+					ID:      p.ID,
+					Address: p.Address,
+					Alias:   p.Alias,
+				},
+				Location: &schema.Location{
+					Longitude: p.Location.Coordinates[0],
+					Latitude:  p.Location.Coordinates[1],
+				},
+				Distance:        p.Distance,
+				ResourceScore:   rating.RatingAverage,
+				ResourceRatings: rating.Ratings,
+			}
+
+		}
+	} else {
+		for i, p := range pois {
+			response[i] = schema.POIDetail{
+				ProfilePOI: schema.ProfilePOI{
+					ID:        p.ID,
+					Address:   p.Address,
+					Alias:     p.Alias,
+					Score:     p.Score,
+					PlaceType: p.PlaceType,
+				},
+				Location: &schema.Location{
+					Longitude: p.Location.Coordinates[0],
+					Latitude:  p.Location.Coordinates[1],
+				},
+				Distance:      p.Distance,
+				ResourceScore: p.ResourceScore,
+			}
 		}
 	}
 
@@ -343,10 +453,19 @@ func (s *Server) getPOIResources(c *gin.Context) {
 		Language      string `form:"lang"`
 		ImportantOnly bool   `form:"important"`
 		IncludeAdded  bool   `form:"include_added"`
+		WebApp        bool   `form:"webapp"`
 	}
 
 	if err := c.Bind(&params); err != nil {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
+		return
+	}
+
+	if params.WebApp {
+		resources := getWebAppResources()
+		c.JSON(http.StatusOK, gin.H{
+			"resources": resources,
+		})
 		return
 	}
 

@@ -50,3 +50,7 @@ map:
   key:
 aqi:
   key:
+pds:
+  endpoint: http://localhost:8080
+cds:
+  endpoint: http://localhost:8081

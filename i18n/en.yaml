@@ -555,3 +555,25 @@ notification:
   behavior_high_risk_follow_up:
     heading: Help protect yourself and others
     content: Please wear a face covering and avoid close contact with others, especially if you have symptoms. Tap if you did this.
+
+resource_for_webapp:
+  face_coverings_required:
+    name: "FACE COVERINGS REQUIRED"
+  social_distancing:
+    name: "SOCIAL DISTANCING"
+  temperature_checks:
+    name: "TEMPERATURE CHECKS"
+  hand_sanitizer:
+    name: "HAND SANITIZER"
+  equipment_disinfected:
+    name: "EQUIPMENT DISINFECTED"
+  surfaces_disinfected:
+    name: "SURFACES DISINFECTED"
+  hand_washing_facilities:
+    name: "HAND-WASHING FACILITIES"
+  good_air_circulation:
+    name: "GOOD AIR CIRCULATION"
+  outdoor_options:
+    name: "OUTDOOR OPTIONS"
+  special_hours_for_at_risk_populations:
+    name: "SPECIAL HOURS FOR AT-RISK POPULATIONS"
