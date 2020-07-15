@@ -124,7 +124,7 @@ func (d *DataStore) GetCommunitySymptomReportItems(token, start, end string) (*s
 
 	if r.StatusCode != 200 {
 		b, _ := httputil.DumpResponse(r, true)
-		log.WithField("resp", string(b)).Debug("error from ratings api")
+		log.WithField("resp", string(b)).Debug("error from report-items api")
 		return nil, fmt.Errorf("fail to get symptom report items")
 	}
 
