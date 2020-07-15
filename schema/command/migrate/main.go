@@ -29,7 +29,7 @@ func init() {
 func main() {
 	schema.NewMongoDBIndexer(viper.GetString("mongo.conn"), viper.GetString("mongo.database")).IndexAll()
 
-	err = migrateMongo()
+	err := migrateMongo()
 	if nil != err {
 		panic(err)
 	}
