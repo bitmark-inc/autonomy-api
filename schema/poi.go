@@ -46,6 +46,6 @@ type POIDetail struct {
 	ProfilePOI      `bson:",inline"`
 	Location        *Location          `json:"location"`
 	Distance        *float64           `json:"distance,omitempty"`
-	ResourceScore   *float64           `json:"resource_score,omitempty"`
-	ResourceRatings map[string]float64 `json:"resource_ratings,omitempty"`
+	ResourceScore   *float64           `json:"resource_score"`
+	ResourceRatings map[string]float64 `json:"resource_ratings"`
 }
