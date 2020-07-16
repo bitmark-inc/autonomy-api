@@ -40,12 +40,18 @@ type ProfilePOI struct {
 	Monitored       bool                 `bson:"monitored" json:"-"`
 }
 
+type ResourceRatingInfo struct {
+	Score  float64 `json:"score"`
+	Counts int     `json:"counts"`
+}
+
 // POIDetail is a client response **ONLY** structure since the data come
 // from both schema Profile.PointsOfInterest & POI
 type POIDetail struct {
-	ProfilePOI      `bson:",inline"`
-	Location        *Location          `json:"location"`
-	Distance        *float64           `json:"distance,omitempty"`
-	ResourceScore   *float64           `json:"resource_score"`
-	ResourceRatings map[string]float64 `json:"resource_ratings"`
+	ProfilePOI          `bson:",inline"`
+	Location            *Location             `json:"location"`
+	Distance            *float64              `json:"distance,omitempty"`
+	ResourceScore       float64               `json:"resource_score"`
+	ResourceRatings     map[string]RatingInfo `json:"resource_ratings"`
+	ResourceLastUpdated int64                 `json:"last_updated"`
 }

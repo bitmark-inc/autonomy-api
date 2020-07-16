@@ -6,6 +6,18 @@ type POIRating struct {
 	Ratings       map[string]float64 `json:"ratings"`
 }
 
+type RatingInfo struct {
+	Score  float64 `bson:"score" json:"score"`
+	Counts int     `bson:"counts" json:"counts"`
+}
+
+type POISummarizedRating struct {
+	ID            string                `json:"id"`
+	LastUpdated   int64                 `json:"last_updated"`
+	RatingAverage float64               `json:"rating_avg"`
+	Ratings       map[string]RatingInfo `json:"ratings"`
+}
+
 type ReportItems struct {
 	ReportItems []struct {
 		ID           string         `json:"id"`

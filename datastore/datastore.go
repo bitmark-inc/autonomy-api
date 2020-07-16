@@ -77,7 +77,7 @@ func (d *DataStore) SetPOIRating(token, id string, ratings map[string]float64) e
 	return nil
 }
 
-func (d *DataStore) GetPOICommunityRatings(token string, ids []string) (map[string]schema.POIRating, error) {
+func (d *DataStore) GetPOICommunityRatings(token string, ids []string) (map[string]schema.POISummarizedRating, error) {
 	r, err := d.cds.GetPOIRatings(token, ids)
 	if err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func (d *DataStore) GetPOICommunityRatings(token string, ids []string) (map[stri
 		return nil, fmt.Errorf("fail to set ratings")
 	}
 
-	var ratings map[string]schema.POIRating
+	var ratings map[string]schema.POISummarizedRating
 
 	if err := json.NewDecoder(r.Body).Decode(&ratings); err != nil {
 		return nil, err

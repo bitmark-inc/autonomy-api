@@ -190,7 +190,7 @@ func (s *Server) listPOI(c *gin.Context) {
 
 	var pois []schema.POI
 	var poiIDs []string // poiIDs will determine whether to get data from data store
-	var poiRatings map[string]schema.POIRating
+	var poiRatings map[string]schema.POISummarizedRating
 	var err error
 	if params.ResourceID != "" {
 		location := &schema.Location{
@@ -251,15 +251,6 @@ func (s *Server) listPOI(c *gin.Context) {
 
 		for i, p := range pois {
 			rating := poiRatings[p.ID.Hex()]
-			if rating.Ratings == nil {
-				rating.Ratings = map[string]float64{}
-			}
-			for k := range defaultWebAppResourceIDMap["en"] {
-				if _, ok := rating.Ratings[k]; !ok {
-					rating.Ratings[k] = 0.0
-				}
-			}
-
 			response[i] = schema.POIDetail{
 				ProfilePOI: schema.ProfilePOI{
 					ID:      p.ID,
@@ -270,11 +261,9 @@ func (s *Server) listPOI(c *gin.Context) {
 					Longitude: p.Location.Coordinates[0],
 					Latitude:  p.Location.Coordinates[1],
 				},
-				Distance:        p.Distance,
-				ResourceScore:   rating.RatingAverage,
-				ResourceRatings: rating.Ratings,
+				ResourceScore:       rating.RatingAverage,
+				ResourceLastUpdated: rating.LastUpdated,
 			}
-
 		}
 	} else {
 		for i, p := range pois {
@@ -291,9 +280,71 @@ func (s *Server) listPOI(c *gin.Context) {
 					Latitude:  p.Location.Coordinates[1],
 				},
 				Distance:      p.Distance,
-				ResourceScore: p.ResourceScore,
+				ResourceScore: *p.ResourceScore,
 			}
 		}
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (s *Server) getPOI(c *gin.Context) {
+	id := c.Param("poiID")
+	poiID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, fmt.Errorf("invalid POI ID"))
+		return
+	}
+
+	macaroonToken := c.GetHeader("X-FORWARD-MACAROON-CDS")
+	if macaroonToken == "" {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, fmt.Errorf("invalid maracoon token"))
+		return
+	}
+
+	poi, err := s.mongoStore.GetPOI(poiID)
+	if err != nil {
+		if err == store.ErrPOINotFound {
+			abortWithEncoding(c, http.StatusNotFound, errorUnknownPOI, err)
+		} else {
+			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		}
+		return
+	}
+
+	poiRatings, err := s.dataStore.GetPOICommunityRatings(macaroonToken, []string{id})
+	if err != nil {
+		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+		return
+	}
+
+	var rating = schema.POISummarizedRating{
+		Ratings: map[string]schema.RatingInfo{},
+	}
+
+	if r, ok := poiRatings[id]; ok {
+		rating = r
+	}
+
+	for k := range defaultWebAppResourceIDMap["en"] {
+		if _, ok := rating.Ratings[k]; !ok {
+			rating.Ratings[k] = schema.RatingInfo{}
+		}
+	}
+
+	var response = schema.POIDetail{
+		ProfilePOI: schema.ProfilePOI{
+			ID:      poi.ID,
+			Address: poi.Address,
+			Alias:   poi.Alias,
+		},
+		Location: &schema.Location{
+			Longitude: poi.Location.Coordinates[0],
+			Latitude:  poi.Location.Coordinates[1],
+		},
+		ResourceScore:       rating.RatingAverage,
+		ResourceRatings:     rating.Ratings,
+		ResourceLastUpdated: rating.LastUpdated,
 	}
 
 	c.JSON(http.StatusOK, response)
