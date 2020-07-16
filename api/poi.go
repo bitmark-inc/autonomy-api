@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -285,6 +286,15 @@ func (s *Server) listPOI(c *gin.Context) {
 		}
 	}
 
+	sort.SliceStable(response, func(i, j int) bool {
+		if response[i].ResourceScore == nil {
+			return false
+		}
+		if response[j].ResourceScore == nil {
+			return true
+		}
+		return *response[i].ResourceScore > *response[j].ResourceScore
+	})
 	c.JSON(http.StatusOK, response)
 }
 
