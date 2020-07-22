@@ -138,6 +138,7 @@ type POI interface {
 	ListPOI(accountNumber string) ([]schema.POIDetail, error)
 	ListPOIByResource(resourceID string, coordinates schema.Location) ([]schema.POI, error)
 	ListPOIByPlaceType(place_type string) ([]schema.POI, error)
+	ListAllPOI(count, page int64) ([]schema.POI, error)
 	SearchPOIByText(text string) ([]schema.POI, error)
 
 	GetPOI(poiID primitive.ObjectID) (*schema.POI, error)
@@ -353,6 +354,32 @@ func (m *mongoDB) ListPOIByResource(resourceID string, coordinates schema.Locati
 			"metric":           0,
 		}),
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	var pois []schema.POI
+	if err := cursor.All(ctx, &pois); err != nil {
+		return nil, err
+	}
+
+	return pois, nil
+}
+
+// ListAllPOI will return all POIs
+func (m *mongoDB) ListAllPOI(count, page int64) ([]schema.POI, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+
+	c := m.client.Database(m.database).Collection(schema.POICollection)
+
+	filter := options.Find().SetSort(bson.M{"_id": 1})
+
+	if count > 0 {
+		filter = filter.SetSkip(count * page).SetLimit(count)
+	}
+
+	cursor, err := c.Find(ctx, bson.M{}, filter)
 	if err != nil {
 		return nil, err
 	}

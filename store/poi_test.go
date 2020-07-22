@@ -24,6 +24,8 @@ import (
 	"github.com/bitmark-inc/autonomy-api/utils"
 )
 
+var testListAllDBName = "test_list_all"
+
 var updatePOIID = primitive.NewObjectID()
 var addedPOIID = primitive.NewObjectID()
 var addedPOIID2 = primitive.NewObjectID()
@@ -251,11 +253,12 @@ var originAlias = "origin POI"
 
 type POITestSuite struct {
 	suite.Suite
-	connURI      string
-	testDBName   string
-	mongoClient  *mongo.Client
-	testDatabase *mongo.Database
-	mockResolver *mocks.MockLocationResolver
+	connURI             string
+	testDBName          string
+	mongoClient         *mongo.Client
+	testDatabase        *mongo.Database
+	testListAllDatabase *mongo.Database
+	mockResolver        *mocks.MockLocationResolver
 }
 
 func NewPOITestSuite(connURI, dbName string) *POITestSuite {
@@ -287,6 +290,7 @@ func (s *POITestSuite) SetupSuite() {
 	s.mockResolver = mockResolver
 	s.mongoClient = mongoClient
 	s.testDatabase = mongoClient.Database(s.testDBName)
+	s.testListAllDatabase = mongoClient.Database(testListAllDBName)
 
 	os.Setenv("TEST_I18N_DIR", "../i18n")
 	viper.AutomaticEnv()
@@ -413,11 +417,21 @@ func (s *POITestSuite) LoadMongoDBFixtures() error {
 		return err
 	}
 
+	if _, err := s.testListAllDatabase.Collection(schema.POICollection).InsertMany(ctx, []interface{}{
+		addedPOI,
+		addedPOI2,
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // CleanMongoDB drop the whole test mongodb
 func (s *POITestSuite) CleanMongoDB() error {
+	if err := s.testListAllDatabase.Drop(context.Background()); err != nil {
+		return err
+	}
 	return s.testDatabase.Drop(context.Background())
 }
 
@@ -998,6 +1012,14 @@ func (s *POITestSuite) TestGetPOIByCoordinatesNoPOI() {
 	poi, err := store.GetPOIByCoordinates(location)
 	s.EqualError(err, ErrPOINotFound.Error())
 	s.Nil(poi)
+}
+
+func (s *POITestSuite) TestListAllPOI() {
+	store := NewMongoStore(s.mongoClient, testListAllDBName)
+
+	poi, err := store.ListAllPOI(0, 0)
+	s.NoError(err)
+	s.Len(poi, 2)
 }
 
 // In order for 'go test' to run this suite, we need to create

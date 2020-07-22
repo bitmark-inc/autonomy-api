@@ -182,6 +182,8 @@ func (s *Server) listPOI(c *gin.Context) {
 		ResourceID string `form:"resource_id"`
 		PlaceType  string `form:"place_type"`
 		Text       string `form:"text"`
+		Page       int64  `form:"page"`
+		Count      int64  `form:"count"`
 	}
 
 	if err := c.Bind(&params); err != nil {
@@ -208,31 +210,30 @@ func (s *Server) listPOI(c *gin.Context) {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
 		}
-	} else if params.PlaceType != "" {
-		pois, err = s.mongoStore.ListPOIByPlaceType(params.PlaceType)
-		if err != nil {
-			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-			return
-		}
-
-		poiIDs = make([]string, len(pois))
-		for i, p := range pois {
-			poiIDs[i] = p.ID.Hex()
-		}
-	} else if params.Text != "" {
-		pois, err = s.mongoStore.SearchPOIByText(params.Text)
-		if err != nil {
-			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
-			return
-		}
-
-		poiIDs = make([]string, len(pois))
-		for i, p := range pois {
-			poiIDs[i] = p.ID.Hex()
-		}
 	} else {
-		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters)
-		return
+		if params.PlaceType != "" {
+			pois, err = s.mongoStore.ListPOIByPlaceType(params.PlaceType)
+			if err != nil {
+				abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+				return
+			}
+		} else if params.Text != "" {
+			pois, err = s.mongoStore.SearchPOIByText(params.Text)
+			if err != nil {
+				abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+				return
+			}
+		} else {
+			pois, err = s.mongoStore.ListAllPOI(params.Count, params.Page)
+			if err != nil {
+				abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
+				return
+			}
+		}
+		poiIDs = make([]string, len(pois))
+		for i, p := range pois {
+			poiIDs[i] = p.ID.Hex()
+		}
 	}
 
 	response := make([]schema.POIDetail, len(pois))
@@ -287,13 +288,7 @@ func (s *Server) listPOI(c *gin.Context) {
 	}
 
 	sort.SliceStable(response, func(i, j int) bool {
-		if response[i].ResourceScore == nil {
-			return false
-		}
-		if response[j].ResourceScore == nil {
-			return true
-		}
-		return *response[i].ResourceScore > *response[j].ResourceScore
+		return response[i].ResourceScore > response[j].ResourceScore
 	})
 	c.JSON(http.StatusOK, response)
 }
