@@ -179,11 +179,15 @@ func (s *Server) listPOI(c *gin.Context) {
 	}
 
 	var params struct {
-		ResourceID string `form:"resource_id"`
-		PlaceType  string `form:"place_type"`
-		Text       string `form:"text"`
-		Page       int64  `form:"page"`
-		Count      int64  `form:"count"`
+		ResourceID string  `form:"resource_id"`
+		PlaceType  string  `form:"place_type"`
+		Text       string  `form:"text"`
+		Profile    string  `form:"profile"`
+		Page       int64   `form:"page"`
+		Count      int64   `form:"count"`
+		Latitude   float64 `form:"lat" binding:"required"`
+		Longitude  float64 `form:"lng" binding:"required"`
+		Radius     int     `form:"radius" binding:"required"`
 	}
 
 	if err := c.Bind(&params); err != nil {
@@ -212,19 +216,35 @@ func (s *Server) listPOI(c *gin.Context) {
 		}
 	} else {
 		if params.PlaceType != "" {
-			pois, err = s.mongoStore.ListPOIByPlaceType(params.PlaceType)
+			pois, err = s.mongoStore.ListPOIByPlaceType(params.PlaceType, params.Profile, params.Count, params.Page,
+				schema.Location{
+					Latitude:  params.Latitude,
+					Longitude: params.Longitude,
+				},
+				params.Radius)
 			if err != nil {
 				abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 				return
 			}
 		} else if params.Text != "" {
-			pois, err = s.mongoStore.SearchPOIByText(params.Text)
+			pois, err = s.mongoStore.SearchPOIByText(params.Text, params.Profile, params.Count, params.Page,
+				schema.Location{
+					Latitude:  params.Latitude,
+					Longitude: params.Longitude,
+				},
+				params.Radius)
 			if err != nil {
 				abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 				return
 			}
 		} else {
-			pois, err = s.mongoStore.ListAllPOI(params.Count, params.Page)
+			pois, err = s.mongoStore.ListAllPOI(
+				params.Profile, params.Count, params.Page,
+				schema.Location{
+					Latitude:  params.Latitude,
+					Longitude: params.Longitude,
+				},
+				params.Radius)
 			if err != nil {
 				abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 				return
@@ -255,15 +275,21 @@ func (s *Server) listPOI(c *gin.Context) {
 			rating := poiRatings[p.ID.Hex()]
 			response[i] = schema.POIDetail{
 				ProfilePOI: schema.ProfilePOI{
-					ID:      p.ID,
-					Address: p.Address,
-					Alias:   p.Alias,
+					ID:             p.ID,
+					Address:        p.Address,
+					Alias:          p.Alias,
+					OpeningHours:   p.OpeningHours,
+					ServiceOptions: p.ServiceOptions,
 				},
+				Distance: p.Distance,
 				Location: &schema.Location{
 					Longitude: p.Location.Coordinates[0],
 					Latitude:  p.Location.Coordinates[1],
 				},
+				PlaceTypes:          p.PlaceTypes,
+				InfoLastUpdated:     p.UpdatedAt,
 				ResourceScore:       rating.RatingAverage,
+				ResourceRatingCount: rating.RatingCounts,
 				ResourceLastUpdated: rating.LastUpdated,
 			}
 		}
@@ -339,15 +365,20 @@ func (s *Server) getPOI(c *gin.Context) {
 
 	var response = schema.POIDetail{
 		ProfilePOI: schema.ProfilePOI{
-			ID:      poi.ID,
-			Address: poi.Address,
-			Alias:   poi.Alias,
+			ID:             poi.ID,
+			Address:        poi.Address,
+			Alias:          poi.Alias,
+			OpeningHours:   poi.OpeningHours,
+			ServiceOptions: poi.ServiceOptions,
 		},
 		Location: &schema.Location{
 			Longitude: poi.Location.Coordinates[0],
 			Latitude:  poi.Location.Coordinates[1],
 		},
+		PlaceTypes:          poi.PlaceTypes,
+		InfoLastUpdated:     poi.UpdatedAt,
 		ResourceScore:       rating.RatingAverage,
+		ResourceRatingCount: rating.RatingCounts,
 		ResourceRatings:     rating.Ratings,
 		ResourceLastUpdated: rating.LastUpdated,
 	}

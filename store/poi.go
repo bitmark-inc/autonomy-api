@@ -137,9 +137,10 @@ type POI interface {
 	AddPOI(alias, address, placeType string, lon, lat float64) (*schema.POI, error)
 	ListPOI(accountNumber string) ([]schema.POIDetail, error)
 	ListPOIByResource(resourceID string, coordinates schema.Location) ([]schema.POI, error)
-	ListPOIByPlaceType(place_type string) ([]schema.POI, error)
-	ListAllPOI(count, page int64) ([]schema.POI, error)
-	SearchPOIByText(text string) ([]schema.POI, error)
+
+	ListPOIByPlaceType(place_type, profile string, count, page int64, coordinates schema.Location, radius int) ([]schema.POI, error)
+	ListAllPOI(profile string, count, page int64, coordinates schema.Location, radius int) ([]schema.POI, error)
+	SearchPOIByText(text, profile string, count, page int64, coordinates schema.Location, radius int) ([]schema.POI, error)
 
 	GetPOI(poiID primitive.ObjectID) (*schema.POI, error)
 	GetPOIByCoordinates(schema.Location) (*schema.POI, error)
@@ -366,20 +367,33 @@ func (m *mongoDB) ListPOIByResource(resourceID string, coordinates schema.Locati
 	return pois, nil
 }
 
-// ListAllPOI will return all POIs
-func (m *mongoDB) ListAllPOI(count, page int64) ([]schema.POI, error) {
+// ListAllPOI will return all POIs within given coordinates and radius.
+func (m *mongoDB) ListAllPOI(profile string, count, page int64, coordinates schema.Location, radius int) ([]schema.POI, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 
 	c := m.client.Database(m.database).Collection(schema.POICollection)
 
-	filter := options.Find().SetSort(bson.M{"_id": 1})
-
-	if count > 0 {
-		filter = filter.SetSkip(count * page).SetLimit(count)
+	query := bson.M{}
+	if profile != "" {
+		query["profile"] = profile
 	}
 
-	cursor, err := c.Find(ctx, bson.M{}, filter)
+	pipelines := mongo.Pipeline{
+		AggregationGeoNear(coordinates, radius, GeoNearOption{
+			DistanceKey:        "distance",
+			DistanceMultiplier: 0.001,
+		}),
+		AggregationMatch(query),
+		AggregationSort(bson.M{"distance": 1}),
+	}
+
+	if count > 0 {
+		pipelines = append(pipelines, AggregationSkip(count*page), AggregationLimit(count))
+	}
+
+	cursor, err := c.Aggregate(ctx, pipelines)
+	// cursor, err := c.Find(ctx, query, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -392,19 +406,38 @@ func (m *mongoDB) ListAllPOI(count, page int64) ([]schema.POI, error) {
 	return pois, nil
 }
 
-// ListPOIByPlaceType list POIs that contains a given place type
-func (m *mongoDB) ListPOIByPlaceType(place_type string) ([]schema.POI, error) {
+// ListPOIByPlaceType list POIs that contains a given place type within given coordinates and radius.
+func (m *mongoDB) ListPOIByPlaceType(place_type, profile string, count, page int64, coordinates schema.Location, radius int) ([]schema.POI, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 
 	c := m.client.Database(m.database).Collection(schema.POICollection)
 
 	log.WithField("place_type", place_type).Info("search POI by place type")
-	cursor, err := c.Find(ctx, bson.M{
+
+	query := bson.M{
 		"place_types": bson.M{
 			"$in": []string{place_type},
 		},
-	})
+	}
+	if profile != "" {
+		query["profile"] = profile
+	}
+
+	pipelines := mongo.Pipeline{
+		AggregationGeoNear(coordinates, radius, GeoNearOption{
+			DistanceKey:        "distance",
+			DistanceMultiplier: 0.001,
+		}),
+		AggregationMatch(query),
+		AggregationSort(bson.M{"distance": 1}),
+	}
+
+	if count > 0 {
+		pipelines = append(pipelines, AggregationSkip(count*page), AggregationLimit(count))
+	}
+
+	cursor, err := c.Aggregate(ctx, pipelines)
 	if err != nil {
 		return nil, err
 	}
@@ -417,8 +450,8 @@ func (m *mongoDB) ListPOIByPlaceType(place_type string) ([]schema.POI, error) {
 	return pois, nil
 }
 
-// SearchPOIByText search POIs that contains given texts in its alias and address field
-func (m *mongoDB) SearchPOIByText(text string) ([]schema.POI, error) {
+// SearchPOIByText search POIs that contains given texts in its alias and address field within given coordinates and radius.
+func (m *mongoDB) SearchPOIByText(text, profile string, count, page int64, coordinates schema.Location, radius int) ([]schema.POI, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 
@@ -428,10 +461,29 @@ func (m *mongoDB) SearchPOIByText(text string) ([]schema.POI, error) {
 	regex := primitive.Regex{Pattern: text, Options: "i"}
 
 	log.WithField("regex", regex.String()).Info("search POI by text")
-	cursor, err := c.Find(ctx, bson.M{"$or": bson.A{
+
+	query := bson.M{"$or": bson.A{
 		bson.M{"address": regex},
 		bson.M{"alias": regex},
-	}})
+	}}
+	if profile != "" {
+		query["profile"] = profile
+	}
+
+	pipelines := mongo.Pipeline{
+		AggregationGeoNear(coordinates, radius, GeoNearOption{
+			DistanceKey:        "distance",
+			DistanceMultiplier: 0.001,
+		}),
+		AggregationMatch(query),
+		AggregationSort(bson.M{"distance": 1}),
+	}
+
+	if count > 0 {
+		pipelines = append(pipelines, AggregationSkip(count*page), AggregationLimit(count))
+	}
+
+	cursor, err := c.Aggregate(ctx, pipelines)
 	if err != nil {
 		return nil, err
 	}

@@ -303,6 +303,7 @@ func (s *POITestSuite) SetupSuite() {
 		s.T().Fatal(err)
 	}
 	schema.NewMongoDBIndexer(s.connURI, s.testDBName).IndexAll()
+	schema.NewMongoDBIndexer(s.connURI, testListAllDBName).IndexAll()
 	if err := s.LoadMongoDBFixtures(); err != nil {
 		s.T().Fatal(err)
 	}
@@ -955,35 +956,45 @@ func (s *POITestSuite) TestListPOIByResourceOutOfRange() {
 func (s *POITestSuite) TestListPOIByPlaceType() {
 	store := NewMongoStore(s.mongoClient, s.testDBName)
 
-	pois, err := store.ListPOIByPlaceType("test_place")
+	pois, err := store.ListPOIByPlaceType("test_place", "", 10, 0, schema.Location{Latitude: 25.12345, Longitude: 118.12345}, 10000)
 	s.NoError(err)
 	s.Len(pois, 2)
 
-	pois, err = store.ListPOIByPlaceType("happy_run")
+	pois, err = store.ListPOIByPlaceType("happy_run", "", 10, 0, schema.Location{Latitude: 25.12345, Longitude: 118.12345}, 10000)
 	s.NoError(err)
 	s.Len(pois, 1)
+
+	// test search out of scope
+	pois, err = store.ListPOIByPlaceType("happy_run", "", 10, 0, schema.Location{Latitude: 24, Longitude: 116}, 10000)
+	s.NoError(err)
+	s.Len(pois, 0)
 }
 
 func (s *POITestSuite) TestSearchPOIByText() {
 	store := NewMongoStore(s.mongoClient, s.testDBName)
 
-	pois, err := store.SearchPOIByText("bitmark")
+	pois, err := store.SearchPOIByText("bitmark", "", 10, 0, schema.Location{Latitude: 25.12345, Longitude: 117.12345}, 10000)
 	s.NoError(err)
 	s.Len(pois, 2)
 
-	pois, err = store.SearchPOIByText("Bitmark")
+	pois, err = store.SearchPOIByText("Bitmark", "", 10, 0, schema.Location{Latitude: 25.12345, Longitude: 117.12345}, 10000)
 	s.NoError(err)
 	s.Len(pois, 2)
 
-	pois, err = store.SearchPOIByText("address123")
+	pois, err = store.SearchPOIByText("address123", "", 10, 0, schema.Location{Latitude: 25.12345, Longitude: 117.12345}, 10000)
 	s.NoError(err)
 	s.Len(pois, 1)
 	s.Contains(pois[0].Address, "address123")
 
-	pois, err = store.SearchPOIByText("alias123")
+	pois, err = store.SearchPOIByText("alias123", "", 10, 0, schema.Location{Latitude: 25.12345, Longitude: 117.12345}, 10000)
 	s.NoError(err)
 	s.Len(pois, 1)
 	s.Contains(pois[0].Alias, "alias123")
+
+	// test search out of scope
+	pois, err = store.SearchPOIByText("alias123", "", 10, 0, schema.Location{Latitude: 24, Longitude: 116}, 10000)
+	s.NoError(err)
+	s.Len(pois, 0)
 }
 
 func (s *POITestSuite) TestGetPOIByCoordinates() {
@@ -1017,7 +1028,7 @@ func (s *POITestSuite) TestGetPOIByCoordinatesNoPOI() {
 func (s *POITestSuite) TestListAllPOI() {
 	store := NewMongoStore(s.mongoClient, testListAllDBName)
 
-	poi, err := store.ListAllPOI(0, 0)
+	poi, err := store.ListAllPOI("", 10, 0, schema.Location{Latitude: 25.1234, Longitude: 120.1234}, 10000)
 	s.NoError(err)
 	s.Len(poi, 2)
 }

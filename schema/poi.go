@@ -23,6 +23,9 @@ type POI struct {
 	County          string             `bson:"county" json:"-"`
 	PlaceType       string             `bson:"place_type" json:"-"`
 	PlaceTypes      []string           `bson:"place_types" json:"-"`
+	OpeningHours    map[int]string     `bson:"opening_hours"`
+	ServiceOptions  map[string]bool    `bson:"service_options"`
+	UpdatedAt       int64              `bson:"updated_at" json:"-"`
 	Distance        *float64           `bson:"distance,omitempty"`
 	ResourceScore   *float64           `bson:"resource_score,omitempty"`
 	ResourceRatings POIRatingsMetric   `bson:"resource_ratings" json:"-"`
@@ -32,6 +35,8 @@ type ProfilePOI struct {
 	ID              primitive.ObjectID   `bson:"id" json:"id"`
 	Alias           string               `bson:"alias" json:"alias"`
 	Address         string               `bson:"address" json:"address"`
+	OpeningHours    map[int]string       `bson:"opening_hours" json:"opening_hours"`
+	ServiceOptions  map[string]bool      `bson:"service_options" json:"service_options"`
 	Score           float64              `bson:"score" json:"score"`
 	PlaceType       string               `bson:"place_type" json:"-"`
 	Metric          Metric               `bson:"metric" json:"-"`
@@ -52,6 +57,9 @@ type POIDetail struct {
 	Location            *Location             `json:"location"`
 	Distance            *float64              `json:"distance,omitempty"`
 	ResourceScore       float64               `json:"resource_score"`
+	ResourceRatingCount int64                 `json:"resource_rating_count"`
 	ResourceRatings     map[string]RatingInfo `json:"resource_ratings"`
-	ResourceLastUpdated int64                 `json:"last_updated"`
+	InfoLastUpdated     int64                 `json:"info_last_updated"`
+	ResourceLastUpdated int64                 `json:"rating_last_updated"`
+	PlaceTypes          []string              `json:"place_types,omitempty"`
 }

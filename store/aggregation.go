@@ -46,6 +46,33 @@ func AggregationAddFields(fields bson.M) bson.D {
 	}
 }
 
+// AggregationSort helps generate aggregation object for $sort
+func AggregationSort(fields bson.M) bson.D {
+	return bson.D{
+		bson.E{
+			"$sort", fields,
+		},
+	}
+}
+
+// AggregationSkip helps generate aggregation object for $skip
+func AggregationSkip(number int64) bson.D {
+	return bson.D{
+		bson.E{
+			"$skip", number,
+		},
+	}
+}
+
+// AggregationLimit helps generate aggregation object for $limit
+func AggregationLimit(number int64) bson.D {
+	return bson.D{
+		bson.E{
+			"$limit", number,
+		},
+	}
+}
+
 // AggregationGroup helps generate aggregation object for $group
 func AggregationGroup(id string, groupConditions bson.D) bson.D {
 	group := bson.D{bson.E{"_id", id}}

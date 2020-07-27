@@ -15,6 +15,7 @@ type POISummarizedRating struct {
 	ID            string                `json:"id"`
 	LastUpdated   int64                 `json:"last_updated"`
 	RatingAverage float64               `json:"rating_avg"`
+	RatingCounts  int64                 `json:"rating_counts"`
 	Ratings       map[string]RatingInfo `json:"ratings"`
 }
 
