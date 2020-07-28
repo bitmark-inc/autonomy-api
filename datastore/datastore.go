@@ -115,8 +115,8 @@ func (d *DataStore) SetPOICommunityRating(token string, id string, ratings map[s
 	return nil
 }
 
-func (d *DataStore) GetCommunitySymptomReportItems(token, start, end string) (*schema.ReportItems, error) {
-	r, err := d.cds.GetSymptomReportItems(token, start, end)
+func (d *DataStore) GetCommunitySymptomReportItems(token string, days int) (*schema.ReportItems, error) {
+	r, err := d.cds.GetSymptomReportItems(token, days)
 	if err != nil {
 		return nil, err
 	}

@@ -20,7 +20,8 @@ type POISummarizedRating struct {
 }
 
 type ReportItems struct {
-	ReportItems []struct {
+	CheckinsNumPastThreeDays int `json:"checkins_num_past_three_days"`
+	ReportItems              []struct {
 		ID           string         `json:"id"`
 		Name         string         `json:"name"`
 		Value        *int           `json:"value"`
