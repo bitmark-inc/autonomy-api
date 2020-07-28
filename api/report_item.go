@@ -31,6 +31,7 @@ type reportItemQueryParams struct {
 	End         string                            `form:"end"`
 	Language    string                            `form:"lang"`
 	PoiID       string                            `form:"poi_id"`
+	Days        int                               `form:"days"`
 }
 
 type reportItem struct {
@@ -76,7 +77,7 @@ func (s *Server) getReportItems(c *gin.Context) {
 
 	switch params.Type {
 	case reportItemTypeSymptom:
-		items, err := s.dataStore.GetCommunitySymptomReportItems(macaroonToken, params.Start, params.End)
+		items, err := s.dataStore.GetCommunitySymptomReportItems(macaroonToken, params.Days)
 		if err != nil {
 			abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
 			return
