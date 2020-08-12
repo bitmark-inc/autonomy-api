@@ -3,7 +3,7 @@ package schema
 import "time"
 
 const (
-	ConsentRecordsCollection = "consent_records"
+	ConsentRecordsCollection = "consentRecords"
 )
 
 type ConsentRecord struct {

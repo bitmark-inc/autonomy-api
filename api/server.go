@@ -140,7 +140,7 @@ func (s *Server) setupRouter() *gin.Engine {
 
 	apiRoute.POST("/auth", s.requestJWT)
 
-	apiRoute.POST("/consent", s.recordConsent)
+	apiRoute.PUT("/consent", s.recordConsent)
 
 	// api route other than `/auth` will apply the following middleware
 	apiRoute.Use(s.authMiddleware())
