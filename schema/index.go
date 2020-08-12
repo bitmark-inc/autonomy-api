@@ -56,6 +56,7 @@ func (m *MongoDBIndexer) IndexAll() {
 	panicIfError(m.IndexSymptomReportCollection())
 	panicIfError(m.IndexCDSConfirmCollection())
 	panicIfError(m.IndexGuideCollection())
+	panicIfError(m.IndexConsentRecordCollection())
 }
 
 func (m *MongoDBIndexer) IndexProfileCollection() error {
@@ -194,5 +195,14 @@ func (m *MongoDBIndexer) IndexGuideCollection() error {
 		Keys: bson.M{
 			"location": "2dsphere",
 		},
+	})
+}
+
+func (m *MongoDBIndexer) IndexConsentRecordCollection() error {
+	return m.createIndex(ConsentRecordsCollection, mongo.IndexModel{
+		Keys: bson.M{
+			"participant_id": 1,
+		},
+		Options: options.Index().SetUnique(true),
 	})
 }
