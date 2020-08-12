@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -15,8 +14,6 @@ func (s *Server) recordConsent(c *gin.Context) {
 		abortWithEncoding(c, http.StatusBadRequest, errorInvalidParameters, err)
 		return
 	}
-
-	r.Timestamp = time.Now()
 
 	if err := s.mongoStore.RecordConsent(r); err != nil {
 		abortWithEncoding(c, http.StatusInternalServerError, errorInternalServer, err)
