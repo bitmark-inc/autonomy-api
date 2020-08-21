@@ -42,7 +42,6 @@ var listResourcePOI1ID = primitive.NewObjectID()
 var listResourcePOI2ID = primitive.NewObjectID()
 var listPlaceTypePOIID = primitive.NewObjectID()
 var listPlaceTypePOI2ID = primitive.NewObjectID()
-var searchTextInAliasPOIID = primitive.NewObjectID()
 var searchTextInAddressPOIID = primitive.NewObjectID()
 
 var notFoundPOIID = primitive.NewObjectID()
@@ -238,15 +237,6 @@ var (
 			Coordinates: []float64{117.12345, 25.12345},
 		},
 	}
-	searchTextInAliasPOI = schema.POI{
-		ID:      searchTextInAliasPOIID,
-		Address: "test only address123",
-		Alias:   "Bitmark",
-		Location: &schema.GeoJSON{
-			Type:        "Point",
-			Coordinates: []float64{117.12345, 25.12345},
-		},
-	}
 )
 
 var originAlias = "origin POI"
@@ -413,7 +403,6 @@ func (s *POITestSuite) LoadMongoDBFixtures() error {
 		listPlaceTypePOI,
 		listPlaceTypePOI2,
 		searchTextInAddressPOI,
-		searchTextInAliasPOI,
 	}); err != nil {
 		return err
 	}
@@ -975,21 +964,21 @@ func (s *POITestSuite) TestSearchPOIByText() {
 
 	pois, err := store.SearchPOIByText("bitmark", "", 10, 0, schema.Location{Latitude: 25.12345, Longitude: 117.12345}, 10000)
 	s.NoError(err)
-	s.Len(pois, 2)
+	s.Len(pois, 0)
 
 	pois, err = store.SearchPOIByText("Bitmark", "", 10, 0, schema.Location{Latitude: 25.12345, Longitude: 117.12345}, 10000)
 	s.NoError(err)
-	s.Len(pois, 2)
+	s.Len(pois, 0)
 
-	pois, err = store.SearchPOIByText("address123", "", 10, 0, schema.Location{Latitude: 25.12345, Longitude: 117.12345}, 10000)
+	pois, err = store.SearchPOIByText("Alias123", "", 10, 0, schema.Location{Latitude: 25.12345, Longitude: 117.12345}, 10000)
 	s.NoError(err)
 	s.Len(pois, 1)
-	s.Contains(pois[0].Address, "address123")
+	s.Contains(strings.ToLower(pois[0].Alias), "alias123")
 
 	pois, err = store.SearchPOIByText("alias123", "", 10, 0, schema.Location{Latitude: 25.12345, Longitude: 117.12345}, 10000)
 	s.NoError(err)
 	s.Len(pois, 1)
-	s.Contains(pois[0].Alias, "alias123")
+	s.Contains(strings.ToLower(pois[0].Alias), "alias123")
 
 	// test search out of scope
 	pois, err = store.SearchPOIByText("alias123", "", 10, 0, schema.Location{Latitude: 24, Longitude: 116}, 10000)

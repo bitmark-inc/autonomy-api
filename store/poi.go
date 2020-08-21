@@ -462,10 +462,8 @@ func (m *mongoDB) SearchPOIByText(text, profile string, count, page int64, coord
 
 	log.WithField("regex", regex.String()).Info("search POI by text")
 
-	query := bson.M{"$or": bson.A{
-		bson.M{"address": regex},
-		bson.M{"alias": regex},
-	}}
+	query := bson.M{"alias": regex}
+
 	if profile != "" {
 		query["profile"] = profile
 	}
