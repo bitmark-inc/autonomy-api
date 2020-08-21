@@ -314,8 +314,15 @@ func (s *Server) listPOI(c *gin.Context) {
 	}
 
 	sort.SliceStable(response, func(i, j int) bool {
-		return response[i].ResourceScore > response[j].ResourceScore
+		pi := response[i]
+		pj := response[j]
+		if pi.ResourceScore == pj.ResourceScore {
+			return pi.ResourceRatingCount > pj.ResourceRatingCount
+		} else {
+			return pi.ResourceScore > pj.ResourceScore
+		}
 	})
+
 	c.JSON(http.StatusOK, response)
 }
 
