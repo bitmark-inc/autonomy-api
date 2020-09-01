@@ -252,6 +252,12 @@ func (s *Server) setupRouter() *gin.Engine {
 		reportItemRoute.GET("", s.getReportItems)
 	}
 
+	feedbackRoute := apiRoute.Group("/feedback")
+	feedbackRoute.Use(s.recognizeAccountMiddleware())
+	{
+		feedbackRoute.POST("", s.createFeedback)
+	}
+
 	debugRoute := apiRoute.Group("/debug")
 	debugRoute.Use(s.recognizeAccountMiddleware())
 	{

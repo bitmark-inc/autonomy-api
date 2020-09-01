@@ -32,6 +32,7 @@ type MongoStore interface {
 	ScoreHistory
 	Suggestion
 	Consent
+	Feedback
 }
 
 // Closer - close db connection
