@@ -64,12 +64,6 @@ func (s *Server) getPOIRating(c *gin.Context) {
 		rating.Ratings = map[string]float64{}
 	}
 
-	for k := range defaultWebAppResourceIDMap["en"] {
-		if _, ok := rating.Ratings[k]; !ok {
-			rating.Ratings[k] = 0.0
-		}
-	}
-
 	c.JSON(http.StatusOK, rating)
 }
 

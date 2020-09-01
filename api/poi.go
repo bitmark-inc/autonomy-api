@@ -364,12 +364,6 @@ func (s *Server) getPOI(c *gin.Context) {
 		rating = r
 	}
 
-	for k := range defaultWebAppResourceIDMap["en"] {
-		if _, ok := rating.Ratings[k]; !ok {
-			rating.Ratings[k] = schema.RatingInfo{}
-		}
-	}
-
 	var response = schema.POIDetail{
 		ProfilePOI: schema.ProfilePOI{
 			ID:             poi.ID,
