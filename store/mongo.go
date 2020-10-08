@@ -33,6 +33,7 @@ type MongoStore interface {
 	Suggestion
 	Consent
 	Feedback
+	Survey
 }
 
 // Closer - close db connection
